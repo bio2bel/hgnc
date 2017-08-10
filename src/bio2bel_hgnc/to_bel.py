@@ -14,10 +14,18 @@ url = 'http://www.genenames.org/cgi-bin/download?col=gd_hgnc_id&col=gd_app_sym&c
 
 
 def get_data():
+    """Gets the gene information from HGNC
+
+    :rtype: pandas.DataFrame
+    """
     return pd.read_csv(url, sep='\t')
 
 
-def write_hgnc_eq_boilerplate(file):
+def write_hgnc_equivalences_boilerplate(file):
+    """Writes the header of the HGNC equivalences file
+
+    :param file file: A write-enabled file or file-like
+    """
     write_boilerplate(
         document_name='HGNC Equivalences',
         description="""This document contains the equivalence information from HGNC to RGD, MGI, UniProt, EC, Entrez and more""",
@@ -39,10 +47,6 @@ def write_hgnc_eq_boilerplate(file):
         file=file
     )
 
-    print('SET Citation = {"PubMed","HGNC","25361968"}', file=file)
-    print('SET Evidence = "HGNC Definitions"', file=file)
-    print('SET Confidence = "Axiomatic"', file=file)
-
 
 columns = [
     'Approved Symbol',
@@ -54,7 +58,17 @@ columns = [
 ]
 
 
-def write_equivalences(df, file=None):
+def write_hgnc_equivalences_body(file=None):
+    """Writes the body of the HGNC equivalences file
+
+    :param file file: A write-enabled file or file-like
+    """
+    df = get_data()
+
+    print('SET Citation = {"PubMed","HGNC","25361968"}', file=file)
+    print('SET Evidence = "HGNC Definitions"', file=file)
+    print('SET Confidence = "Axiomatic"', file=file)
+
     for _, hgnc, egid, upid, mgi, rgd, ecs in df[columns].itertuples():
 
         hgnc = ensure_quotes(hgnc)
@@ -73,14 +87,17 @@ def write_equivalences(df, file=None):
                 print('p(EC:{}) hasMember p(HGNC:{})'.format(ensure_quotes(ec), hgnc), file=file)
 
 
-def write_bel_eq(file, df=None):
-    write_hgnc_eq_boilerplate(file)
-    df = get_data() if df is None else df
-    write_equivalences(df, file)
+def write_hgnc_equivalences(file=None):
+    """Writes the HGNC equivalences to Entrez, UniProt, and Enzyme Commission.
+
+    :param file file: A write-enabled file or file-like
+    """
+    write_hgnc_equivalences_boilerplate(file)
+    write_hgnc_equivalences_body(file)
 
 
 if __name__ == '__main__':
     desktop = os.path.join(os.path.expanduser('~'), 'Desktop', 'hgnc-equivalences.bel')
 
     with open(desktop, 'w') as f:
-        write_bel_eq(f)
+        write_hgnc_equivalences(f)
