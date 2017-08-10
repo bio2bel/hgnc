@@ -13,6 +13,7 @@ from pybel_tools.utils import grouper
 
 __all__ = [
     'HGNCAnnotator',
+    'hgnc_annotator',
 ]
 
 log = logging.getLogger(__name__)
@@ -134,7 +135,7 @@ class HGNCAnnotator(NodeAnnotator):
         )
 
 
-annotator = HGNCAnnotator(preload=False)
+hgnc_annotator = HGNCAnnotator(preload=False)
 
 
 @pipeline.in_place_mutator
@@ -143,5 +144,5 @@ def annotate_hgnc(graph):
 
     :param pybel.BELGraph graph:
     """
-    annotator.populate_by_graph(graph)
-    annotator.annotate(graph)
+    hgnc_annotator.populate_by_graph(graph)
+    hgnc_annotator.annotate(graph)
