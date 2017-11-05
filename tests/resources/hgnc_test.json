@@ -4,7 +4,7 @@
     "QTime": 17
   },
   "response": {
-    "numFound": 5,
+    "numFound": 7,
     "docs": [
       {
         "gene_family": [
@@ -293,6 +293,94 @@
           1374051
         ],
         "location_sortable": "01q32.2"
+      },
+      {
+        "gene_family": [
+          "MicroRNAs"
+        ],
+        "date_approved_reserved": "2005-07-15",
+        "locus_group": "non-coding RNA",
+        "status": "Approved",
+        "alias_symbol": [
+          "hsa-mir-489"
+        ],
+        "_version_": 1583018084512301064,
+        "uuid": "51e970b9-30fc-4976-9ddb-414edb516443",
+        "refseq_accession": [
+          "NR_030164"
+        ],
+        "mirbase": "MI0003124",
+        "locus_type": "RNA, micro",
+        "gene_family_id": [
+          476
+        ],
+        "hgnc_id": "HGNC:32074",
+        "rna_central_ids": [
+          "URS000075EA26"
+        ],
+        "rgd_id": [
+          "RGD:2314886"
+        ],
+        "ensembl_gene_id": "ENSG00000207656",
+        "entrez_id": "574442",
+        "omim_id": [
+          "614523"
+        ],
+        "symbol": "MIR489",
+        "location": "7q21.3",
+        "name": "microRNA 489",
+        "date_modified": "2014-11-19",
+        "ucsc_id": "uc022ahk.1",
+        "prev_symbol": [
+          "MIRN489"
+        ],
+        "date_symbol_changed": "2008-12-18",
+        "location_sortable": "07q21.3"
+      },
+      {
+        "gene_family": [
+          "Long non-coding RNAs (published)"
+        ],
+        "date_approved_reserved": "2013-05-17",
+        "alias_name": [
+          "H19 X-linked co-expressed lncRNA"
+        ],
+        "vega_id": "OTTHUMG00000022455",
+        "locus_group": "non-coding RNA",
+        "status": "Approved",
+        "alias_symbol": [
+          "MGC16121",
+          "H19X"
+        ],
+        "_version_": 1583018084514398217,
+        "uuid": "ac9528f9-f205-4367-8a17-db88402ad92d",
+        "prev_name": [
+          "MIR503 host gene (non-protein coding)"
+        ],
+        "refseq_accession": [
+          "NR_024607"
+        ],
+        "locus_type": "RNA, long non-coding",
+        "gene_family_id": [
+          788
+        ],
+        "hgnc_id": "HGNC:28258",
+        "rna_central_ids": [
+          "URS000075CE3A"
+        ],
+        "ensembl_gene_id": "ENSG00000223749",
+        "entrez_id": "84848",
+        "symbol": "MIR503HG",
+        "date_name_changed": "2015-02-20",
+        "location": "Xq26.3",
+        "lncipedia": "MIR503HG",
+        "name": "MIR503 host gene",
+        "date_modified": "2017-07-05",
+        "pubmed_id": [
+          24463510,
+          27023770
+        ],
+        "location_sortable": "Xq26.3"
       }
     ]
   }

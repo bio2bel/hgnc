@@ -6,10 +6,13 @@ import tempfile
 import unittest
 
 import pyhgnc
-from bio2bel_hgnc.enrich import add_metadata, add_node_equivalencies, add_node_orthologies, get_node
+from bio2bel_hgnc.enrich import (
+    add_metadata, add_node_central_dogma, add_node_equivalencies, add_node_orthologies,
+    get_node,
+)
 from pybel import BELGraph
-from pybel.constants import EQUIVALENT_TO, ORTHOLOGOUS, RELATION, unqualified_edge_code
-from pybel.dsl.nodes import protein
+from pybel.constants import EQUIVALENT_TO, ORTHOLOGOUS, RELATION, TRANSCRIBED_TO, TRANSLATED_TO, unqualified_edge_code
+from pybel.dsl.nodes import gene, mirna, protein, rna
 from pybel.examples import sialic_acid_graph
 from pybel.examples.sialic_acid_example import cd33
 from pybel.parser.canonicalize import po_to_tuple
@@ -18,6 +21,8 @@ from tests.constants import hcop_test_path, hgnc_test_path
 
 log = logging.getLogger(__name__)
 
+translate_code = unqualified_edge_code[TRANSLATED_TO]
+transcribe_code = unqualified_edge_code[TRANSCRIBED_TO]
 equivalence_code = unqualified_edge_code[EQUIVALENT_TO]
 
 
@@ -229,3 +234,70 @@ class TestEnrich(unittest.TestCase):
         v = list(graph.edge[cd33_hgnc_tuple][cd33_mgi_id_tuple].values())[0]
         self.assertIn(RELATION, v)
         self.assertEqual(ORTHOLOGOUS, v[RELATION])
+
+    def test_add_mirna(self):
+        graph = BELGraph()
+        mir489_gene = gene(namespace='HGNC', name='MIR489', identifier='32074')
+        mir489_gene_tuple = graph.add_node_from_data(mir489_gene)
+
+        self.assertEqual(1, graph.number_of_nodes())
+        self.assertEqual(0, graph.number_of_edges())
+
+        add_node_central_dogma(graph, mir489_gene_tuple)
+
+        self.assertEqual(2, graph.number_of_nodes())
+        self.assertEqual(1, graph.number_of_edges())
+
+        mir489_mirna = mirna(namespace='HGNC', name='MIR489', identifier='32074')
+        self.assertTrue(graph.has_node_with_data(mir489_mirna))
+
+        # Check doesn't add protein
+        mir489_protein = mirna(namespace='HGNC', name='MIR489', identifier='32074')
+        self.assertFalse(graph.has_node_with_data(mir489_protein))
+
+    def test_add_rna(self):
+        graph = BELGraph()
+        MIR503HG_gene = gene(namespace='HGNC', name='MIR503HG', identifier='28258')
+        MIR503HG_gene_tuple = graph.add_node_from_data(MIR503HG_gene)
+
+        self.assertEqual(1, graph.number_of_nodes())
+        self.assertEqual(0, graph.number_of_edges())
+
+        add_node_central_dogma(graph, MIR503HG_gene_tuple)
+
+        self.assertEqual(2, graph.number_of_nodes())
+        self.assertEqual(1, graph.number_of_edges())
+
+        MIR503HG_rna = rna(namespace='HGNC', name='MIR503HG', identifier='28258')
+        self.assertTrue(graph.has_node_with_data(MIR503HG_rna))
+
+        # Check doesn't add protein
+        MIR503HG_protein = protein(namespace='HGNC', name='MIR503HG', identifier='28258')
+        self.assertFalse(graph.has_node_with_data(MIR503HG_protein))
+
+    def test_add_protein(self):
+        graph = BELGraph()
+        cd33_gene = gene(name='CD33', namespace='HGNC')
+        cd33_gene_tuple = graph.add_node_from_data(cd33_gene)
+
+        self.assertEqual(1, graph.number_of_nodes())
+        self.assertEqual(0, graph.number_of_edges())
+
+        add_node_central_dogma(graph, cd33_gene_tuple)
+
+        self.assertEqual(3, graph.number_of_nodes())
+        self.assertEqual(2, graph.number_of_edges())
+
+        cd33_rna = rna(name='CD33', namespace='HGNC')
+        self.assertTrue(graph.has_node_with_data(cd33_rna))
+
+        cd33_rna_tuple = po_to_tuple(cd33_rna)
+        self.assertIn(cd33_rna_tuple, graph.edge[cd33_gene_tuple])
+        self.assertIn(transcribe_code, graph.edge[cd33_gene_tuple][cd33_rna_tuple])
+
+        cd33_protein = protein(name='CD33', namespace='HGNC')
+        self.assertTrue(graph.has_node_with_data(cd33_protein))
+
+        cd33_protein_tuple = po_to_tuple(cd33_protein)
+        self.assertIn(cd33_protein_tuple, graph.edge[cd33_rna_tuple])
+        self.assertIn(translate_code, graph.edge[cd33_rna_tuple][cd33_protein_tuple])

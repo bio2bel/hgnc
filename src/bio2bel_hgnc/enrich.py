@@ -2,7 +2,7 @@
 
 """Enrichment functions for BEL graphs"""
 
-from pybel.constants import NAMESPACE
+from pybel.constants import FUNCTION, GENE, NAMESPACE
 
 __all__ = [
     'get_node',
@@ -69,3 +69,25 @@ def add_orthologies(graph, manager=None, add_leaves=False):
     for node, data in graph.nodes(data=True):
         if NAMESPACE in data and data[NAMESPACE] == 'HGNC':
             add_node_orthologies(graph, node, manager=manager, add_leaves=add_leaves)
+
+
+def add_node_central_dogma(graph, node, manager=None):
+    """Uses the field :py:attr:`pyhgnc.manager.models.HGNC.locus_type` to determine if a gene node should be extended
+    with nothing, an miRNA, an RNA, and possibly then a protein.
+
+    :param pybel.BELGraph graph: A BEL graph
+    :param tuple node: A PyBEL node tuple
+    :param Optional[pyhgnc.manager.query.QueryManager] manager: A PyHGNC database manager
+    """
+    raise NotImplementedError
+
+
+def add_central_dogma(graph, manager=None):
+    """Add central dogma information for all gene nodes when possible
+
+    :param pybel.BELGraph graph: A BEL graph
+    :param Optional[pyhgnc.manager.query.QueryManager] manager: A PyHGNC database manager
+    """
+    for node, data in graph.nodes(data=True):
+        if data[FUNCTION] == GENE:
+            add_node_central_dogma(graph, node, manager=manager)
