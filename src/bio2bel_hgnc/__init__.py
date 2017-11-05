@@ -2,13 +2,6 @@
 
 """Exports HGNC Equivalences"""
 
-from . import integrate
-from .integrate import *
-
-__all__ = (
-    integrate.__all__
-)
-
 __version__ = '0.0.1-dev'
 
 __title__ = 'bio2bel_hgnc'

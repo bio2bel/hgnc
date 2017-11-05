@@ -1,5 +1,5 @@
 click
+six
 pandas
 pybel
-pybel_tools
 pyhgnc

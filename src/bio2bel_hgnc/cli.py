@@ -5,7 +5,7 @@ import click
 
 @click.group()
 def main():
-    pass
+    """Bio2BEL HGNC Utilities"""
 
 
 if __name__ == '__main__':

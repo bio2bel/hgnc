@@ -10,15 +10,12 @@ PACKAGES = setuptools.find_packages(where='src')
 META_PATH = os.path.join('src', 'bio2bel_hgnc', '__init__.py')
 INSTALL_REQUIRES = [
     'click',
+    'six',
     'pandas',
-    'pybel',
     'pybel_tools',
     'pyhgnc',
 ]
 ENTRY_POINTS = {
-    'bio2bel': [
-        'hgnc = bio2bel_hgnc',
-    ],
     'console_scripts': [
         'bio2bel_hgnc = bio2bel_hgnc.cli:main'
     ]
