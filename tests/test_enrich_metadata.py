@@ -13,7 +13,6 @@ from bio2bel_hgnc.enrich import (
 from pybel import BELGraph
 from pybel.constants import EQUIVALENT_TO, ORTHOLOGOUS, RELATION, TRANSCRIBED_TO, TRANSLATED_TO, unqualified_edge_code
 from pybel.dsl.nodes import gene, mirna, protein, rna
-from pybel.examples import sialic_acid_graph
 from pybel.examples.sialic_acid_example import cd33
 from pybel.parser.canonicalize import po_to_tuple
 from pyhgnc import QueryManager
@@ -26,15 +25,18 @@ transcribe_code = unqualified_edge_code[TRANSCRIBED_TO]
 equivalence_code = unqualified_edge_code[EQUIVALENT_TO]
 
 
-class TestEnrich(unittest.TestCase):
+class TemporaryCacheMixin(unittest.TestCase):
     """
+    :type file_handle: int
+    :type path: str
     :type manager: pyhgnc.manager.query.QueryManager
     """
+    file_handle, path, manager = None, None, None
 
     @classmethod
     def setUpClass(cls):
         """Create and populate temporary PyHGNC cache"""
-        cls.fd, cls.path = tempfile.mkstemp()
+        cls.file_handle, cls.path = tempfile.mkstemp()
         cls.connection = 'sqlite:///' + cls.path
         log.info('Test generated connection string %s', cls.connection)
 
@@ -50,9 +52,11 @@ class TestEnrich(unittest.TestCase):
     def tearDownClass(cls):
         """Deletes the temporary PyHGNC cache"""
         cls.manager.session.close()
-        os.close(cls.fd)
+        os.close(cls.file_handle)
         os.remove(cls.path)
 
+
+class TestEnrich(TemporaryCacheMixin):
     def help_check_cd33_model(self, model):
         """Checks if the given model is CD33
 
@@ -76,7 +80,7 @@ class TestEnrich(unittest.TestCase):
 
         cd33_tuple = graph.add_node_from_data(protein(name='CD33', namespace='HGNC'))
 
-        cd33_model = get_node(sialic_acid_graph, cd33_tuple, manager=self.manager)
+        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
         self.help_check_cd33_model(cd33_model)
 
     def test_get_hgnc_id_node(self):
@@ -84,7 +88,7 @@ class TestEnrich(unittest.TestCase):
 
         cd33_tuple = graph.add_node_from_data(protein(identifier='1659', namespace='HGNC'))
 
-        cd33_model = get_node(sialic_acid_graph, cd33_tuple, manager=self.manager)
+        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
         self.help_check_cd33_model(cd33_model)
 
     def test_get_rgd_node(self):
@@ -93,7 +97,7 @@ class TestEnrich(unittest.TestCase):
         # CD33's MGI counterpart's identifier
         cd33_tuple = graph.add_node_from_data(protein(name='Cd33', namespace='RGD'))
 
-        cd33_model = get_node(sialic_acid_graph, cd33_tuple, manager=self.manager)
+        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
         self.help_check_cd33_model(cd33_model)
 
     def test_get_rgd_id_node(self):
@@ -102,7 +106,7 @@ class TestEnrich(unittest.TestCase):
         # CD33's RGD counterpart's identifier
         cd33_tuple = graph.add_node_from_data(protein(identifier='1596020', namespace='RGD'))
 
-        cd33_model = get_node(sialic_acid_graph, cd33_tuple, manager=self.manager)
+        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
         self.help_check_cd33_model(cd33_model)
 
     def test_get_mgi_node(self):
@@ -111,7 +115,7 @@ class TestEnrich(unittest.TestCase):
         # CD33's MGI counterpart's identifier
         cd33_tuple = graph.add_node_from_data(protein(name='Cd33', namespace='MGI'))
 
-        cd33_model = get_node(sialic_acid_graph, cd33_tuple, manager=self.manager)
+        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
         self.help_check_cd33_model(cd33_model)
 
     def test_get_mgi_id_node(self):
@@ -120,7 +124,7 @@ class TestEnrich(unittest.TestCase):
         # CD33's MGI counterpart's identifier
         cd33_tuple = graph.add_node_from_data(protein(identifier='99440', namespace='MGI'))
 
-        cd33_model = get_node(sialic_acid_graph, cd33_tuple, manager=self.manager)
+        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
         self.help_check_cd33_model(cd33_model)
 
     def test_get_entrez_node(self):
@@ -129,23 +133,24 @@ class TestEnrich(unittest.TestCase):
         # CD33's MGI counterpart's identifier
         cd33_tuple = graph.add_node_from_data(protein(identifier='945', namespace='EG'))
 
-        cd33_model = get_node(sialic_acid_graph, cd33_tuple, manager=self.manager)
+        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
         self.help_check_cd33_model(cd33_model)
 
     def test_add_metadata(self):
-        cd33_tuple = sialic_acid_graph.add_node_from_data(cd33)
+        graph = BELGraph()
+        cd33_tuple = graph.add_node_from_data(cd33)
 
-        self.assertIn(cd33_tuple, sialic_acid_graph)
-        self.assertIsNone(sialic_acid_graph.get_node_label(cd33_tuple))
-        self.assertIsNone(sialic_acid_graph.get_node_identifier(cd33_tuple))
+        self.assertIn(cd33_tuple, graph)
+        self.assertIsNone(graph.get_node_label(cd33_tuple))
+        self.assertIsNone(graph.get_node_identifier(cd33_tuple))
 
-        add_metadata(sialic_acid_graph, cd33_tuple, manager=self.manager)
+        add_metadata(graph, cd33_tuple, manager=self.manager)
 
-        self.assertIn(cd33_tuple, sialic_acid_graph)
-        self.assertIsNotNone(sialic_acid_graph.get_node_label(cd33_tuple))
+        self.assertIn(cd33_tuple, graph)
+        self.assertIsNotNone(graph.get_node_label(cd33_tuple))
 
-        self.assertEqual('CD33 molecule', sialic_acid_graph.get_node_label(cd33_tuple))
-        self.assertEqual('1659', sialic_acid_graph.get_node_identifier(cd33_tuple))
+        self.assertEqual('CD33 molecule', graph.get_node_label(cd33_tuple))
+        self.assertEqual('1659', graph.get_node_identifier(cd33_tuple))
 
     def test_add_equivalency(self):
         graph = BELGraph()
@@ -257,23 +262,23 @@ class TestEnrich(unittest.TestCase):
 
     def test_add_rna(self):
         graph = BELGraph()
-        MIR503HG_gene = gene(namespace='HGNC', name='MIR503HG', identifier='28258')
-        MIR503HG_gene_tuple = graph.add_node_from_data(MIR503HG_gene)
+        mir503hg_gene = gene(namespace='HGNC', name='MIR503HG', identifier='28258')
+        mir503hg_gene_tuple = graph.add_node_from_data(mir503hg_gene)
 
         self.assertEqual(1, graph.number_of_nodes())
         self.assertEqual(0, graph.number_of_edges())
 
-        add_node_central_dogma(graph, MIR503HG_gene_tuple)
+        add_node_central_dogma(graph, mir503hg_gene_tuple)
 
         self.assertEqual(2, graph.number_of_nodes())
         self.assertEqual(1, graph.number_of_edges())
 
-        MIR503HG_rna = rna(namespace='HGNC', name='MIR503HG', identifier='28258')
-        self.assertTrue(graph.has_node_with_data(MIR503HG_rna))
+        mir503hg_rna = rna(namespace='HGNC', name='MIR503HG', identifier='28258')
+        self.assertTrue(graph.has_node_with_data(mir503hg_rna))
 
         # Check doesn't add protein
-        MIR503HG_protein = protein(namespace='HGNC', name='MIR503HG', identifier='28258')
-        self.assertFalse(graph.has_node_with_data(MIR503HG_protein))
+        mir503hg_protein = protein(namespace='HGNC', name='MIR503HG', identifier='28258')
+        self.assertFalse(graph.has_node_with_data(mir503hg_protein))
 
     def test_add_protein(self):
         graph = BELGraph()
