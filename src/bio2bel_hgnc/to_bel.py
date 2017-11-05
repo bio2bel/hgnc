@@ -3,12 +3,11 @@
 from __future__ import print_function
 
 import os
-
 import pandas as pd
-
 from pybel.utils import ensure_quotes
 from pybel_tools.document_utils import write_boilerplate
-from pybel_tools.resources import CONFIDENCE, get_latest_arty_namespace
+from pybel.resources.defaults import CONFIDENCE
+from pybel.resources.arty import get_latest_arty_namespace
 
 url = 'http://www.genenames.org/cgi-bin/download?col=gd_hgnc_id&col=gd_app_sym&col=gd_app_name&col=gd_status&col=gd_prev_sym&col=gd_aliases&col=gd_pub_chrom_map&col=gd_date_name_change&col=gd_pub_acc_ids&col=gd_enz_ids&col=gd_pub_eg_id&col=gd_other_ids&col=gd_other_ids_list&col=md_prot_id&col=md_mgd_id&col=md_rgd_id&status=Approved&status=Entry+Withdrawn&status_opt=2&where=&order_by=gd_app_sym_sort&format=text&limit=&hgnc_dbtag=on&submit=submit'
 
@@ -27,13 +26,13 @@ def write_hgnc_equivalences_boilerplate(file):
     :param file file: A write-enabled file or file-like
     """
     write_boilerplate(
-        document_name='HGNC Equivalences',
+        name='HGNC Equivalences',
         description="""This document contains the equivalence information from HGNC to RGD, MGI, UniProt, EC, Entrez and more""",
         authors='Charles Tapley Hoyt',
         contact='charles.hoyt@scai.fraunhofer.de',
         licenses='Creative Commons by 4.0',
         copyright='Copyright (c) 2017 Charles Tapley Hoyt. All rights reserved',
-        namespace_dict={
+        namespace_url={
             'HGNC': get_latest_arty_namespace('hgnc-human-genes'),
             'UniProt': get_latest_arty_namespace('uniprot'),
             'MGI': get_latest_arty_namespace('mgi-mouse-genes'),

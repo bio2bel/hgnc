@@ -1,1 +1,5 @@
+click
+pandas
+pybel
 pybel_tools
+pyhgnc
