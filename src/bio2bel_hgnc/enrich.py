@@ -4,13 +4,23 @@
 
 from pybel.constants import NAMESPACE
 
+__all__ = [
+    'get_node',
+    'add_metadata',
+    'add_node_equivalencies',
+    'add_node_orthologies',
+    'add_orthologies',
+    'add_node_central_dogma',
+    'add_central_dogma',
+]
+
 
 def get_node(graph, node, manager=None):
     """Gets a node from the PyHGNC database, whether it has a HGNC, RGD, MGI, or EG identifier.
 
     :param pybel.BELGraph graph: A BEL graph
     :param tuple node: A PyBEL node tuple
-    :param optional[pyhgnc.QueryManager] manager: A PyHGNC database manager
+    :param Optional[pyhgnc.manager.query.QueryManager] manager: A PyHGNC database manager
     :rtype: pyhgnc.manager.models.HGNC
     """
     raise NotImplementedError
@@ -21,7 +31,7 @@ def add_metadata(graph, node, manager=None):
 
     :param pybel.BELGraph graph: A BEL Graph
     :param tuple node: A PyBEL node tuple
-    :param optional[pyhgnc.QueryManager] manager: A PyHGNC database manager
+    :param Optional[pyhgnc.manager.query.QueryManager] manager: A PyHGNC database manager
     """
     raise NotImplementedError
 
@@ -31,7 +41,7 @@ def add_node_equivalencies(grpah, node, manager=None, add_leaves=False):
 
     :param pybel.BELGraph graph: A BEL graph
     :param tuple node: A PyBEL node tuple
-    :param optional[pyhgnc.QueryManager] manager: A PyHGNC database manager
+    :param Optional[pyhgnc.manager.query.QueryManager] manager: A PyHGNC database manager
     :param bool add_leaves: Should equivalencies that are not already in the graph be added?
     """
     raise NotImplementedError
@@ -42,7 +52,7 @@ def add_node_orthologies(graph, node, manager=None, add_leaves=False):
 
     :param pybel.BELGraph graph: A BEL graph
     :param tuple node: A PyBEL node tuple
-    :param optional[pyhgnc.QueryManager] manager: A PyHGNC database manager
+    :param Optional[pyhgnc.manager.query.QueryManager] manager: A PyHGNC database manager
     :param bool add_leaves: Should orthologs that are not already in the graph be added?
     """
     raise NotImplementedError
@@ -53,7 +63,7 @@ def add_orthologies(graph, manager=None, add_leaves=False):
     graph
 
     :param pybel.BELGraph graph: A BEL graph
-    :param optional[pyhgnc.QueryManager] manager: A PyHGNC database manager
+    :param Optional[pyhgnc.manager.query.QueryManager] manager: A PyHGNC database manager
     :param bool add_leaves: Should orthologs that are not already in the graph be added?
     """
     for node, data in graph.nodes(data=True):

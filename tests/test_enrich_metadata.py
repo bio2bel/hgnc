@@ -23,7 +23,7 @@ equivalence_code = unqualified_edge_code[EQUIVALENT_TO]
 
 class TestEnrich(unittest.TestCase):
     """
-    :type manager: QueryManager
+    :type manager: pyhgnc.manager.query.QueryManager
     """
 
     @classmethod
