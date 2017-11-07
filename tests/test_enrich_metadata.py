@@ -14,7 +14,7 @@ from pybel import BELGraph
 from pybel.constants import EQUIVALENT_TO, ORTHOLOGOUS, RELATION, TRANSCRIBED_TO, TRANSLATED_TO, unqualified_edge_code
 from pybel.dsl.nodes import gene, mirna, protein, rna
 from pybel.examples.sialic_acid_example import cd33
-from pybel.parser.canonicalize import po_to_tuple
+from pybel.parser.canonicalize import node_to_tuple
 from pyhgnc import QueryManager
 from tests.constants import hcop_test_path, hgnc_test_path
 
@@ -187,7 +187,7 @@ class TestEnrich(TemporaryCacheMixin):
 
         self.assertTrue(graph.has_node_with_data(cd33_ed))
 
-        cd33_eg_node = po_to_tuple(cd33_ed)
+        cd33_eg_node = node_to_tuple(cd33_ed)
 
         self.assertIn(cd33_eg_node, graph.edge[cd33_hgnc_tuple])
         self.assertIn(equivalence_code, graph.edge[cd33_hgnc_tuple][cd33_eg_node])
@@ -296,13 +296,13 @@ class TestEnrich(TemporaryCacheMixin):
         cd33_rna = rna(name='CD33', namespace='HGNC')
         self.assertTrue(graph.has_node_with_data(cd33_rna))
 
-        cd33_rna_tuple = po_to_tuple(cd33_rna)
+        cd33_rna_tuple = node_to_tuple(cd33_rna)
         self.assertIn(cd33_rna_tuple, graph.edge[cd33_gene_tuple])
         self.assertIn(transcribe_code, graph.edge[cd33_gene_tuple][cd33_rna_tuple])
 
         cd33_protein = protein(name='CD33', namespace='HGNC')
         self.assertTrue(graph.has_node_with_data(cd33_protein))
 
-        cd33_protein_tuple = po_to_tuple(cd33_protein)
+        cd33_protein_tuple = node_to_tuple(cd33_protein)
         self.assertIn(cd33_protein_tuple, graph.edge[cd33_rna_tuple])
         self.assertIn(translate_code, graph.edge[cd33_rna_tuple][cd33_protein_tuple])
