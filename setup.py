@@ -12,7 +12,7 @@ INSTALL_REQUIRES = [
     'click',
     'six',
     'pandas',
-    'pybel_tools',
+    'pybel>=0.9.5',
     'pyhgnc',
 ]
 ENTRY_POINTS = {

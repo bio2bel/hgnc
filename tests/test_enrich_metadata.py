@@ -12,7 +12,7 @@ from bio2bel_hgnc.enrich import (
 )
 from pybel import BELGraph
 from pybel.constants import EQUIVALENT_TO, ORTHOLOGOUS, RELATION, TRANSCRIBED_TO, TRANSLATED_TO, unqualified_edge_code
-from pybel.dsl.nodes import gene, mirna, protein, rna
+from pybel.dsl import gene, mirna, protein, rna
 from pybel.examples.sialic_acid_example import cd33
 from pybel.parser.canonicalize import node_to_tuple
 from pyhgnc import QueryManager
