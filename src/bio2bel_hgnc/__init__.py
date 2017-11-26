@@ -2,6 +2,8 @@
 
 """Exports HGNC Equivalences"""
 
+from .manager import Manager
+
 __version__ = '0.0.1-dev'
 
 __title__ = 'bio2bel_hgnc'
