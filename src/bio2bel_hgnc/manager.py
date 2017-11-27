@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from pyhgnc import QueryManager
+from pyhgnc.manager.database import DbManager
+from pyhgnc.manager.query import QueryManager
 
 
 def _deal_with_nonsense(results):
@@ -13,8 +14,14 @@ def _deal_with_nonsense(results):
     return results[0]
 
 
-class Manager(QueryManager):
+class Manager(DbManager, QueryManager):
     """An extended version of the PyHGNC manager to have useful functions"""
+
+    def populate(self, *args, **kwargs):
+        self.db_import(*args, **kwargs)
+
+    def drop_all(self):
+        self._drop_tables()
 
     def get_gene_by_hgnc_symbol(self, hgnc_symbol):
         """Gets a gene by the symbol
