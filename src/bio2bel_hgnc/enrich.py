@@ -3,6 +3,7 @@
 """Enrichment functions for BEL graphs"""
 
 from pybel.constants import FUNCTION, GENE, NAMESPACE
+from .manager import Manager
 
 __all__ = [
     'get_node',
@@ -15,15 +16,16 @@ __all__ = [
 ]
 
 
-def get_node(graph, node, manager=None):
+def get_node(graph, node, connection=None):
     """Gets a node from the PyHGNC database, whether it has a HGNC, RGD, MGI, or EG identifier.
 
     :param pybel.BELGraph graph: A BEL graph
     :param tuple node: A PyBEL node tuple
-    :param Optional[pyhgnc.manager.query.QueryManager] manager: A PyHGNC database manager
+    :param Optional[pyhgnc.manager.query.QueryManager] connection: A PyHGNC database manager
     :rtype: pyhgnc.manager.models.HGNC
     """
-    raise NotImplementedError
+    manager = Manager.ensure(connection=connection)
+    manager.get_node(graph, node)
 
 
 def add_metadata(graph, node, manager=None):

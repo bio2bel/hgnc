@@ -6,16 +6,15 @@ import tempfile
 import unittest
 
 import pyhgnc
+from bio2bel_hgnc import Manager
 from bio2bel_hgnc.enrich import (
-    add_metadata, add_node_central_dogma, add_node_equivalencies, add_node_orthologies,
-    get_node,
+    add_metadata, add_node_central_dogma, add_node_equivalencies, add_node_orthologies, get_node,
 )
 from pybel import BELGraph
 from pybel.constants import EQUIVALENT_TO, ORTHOLOGOUS, RELATION, TRANSCRIBED_TO, TRANSLATED_TO, unqualified_edge_code
 from pybel.dsl import gene, mirna, protein, rna
 from pybel.examples.sialic_acid_example import cd33
 from pybel.parser.canonicalize import node_to_tuple
-from pyhgnc import QueryManager
 from tests.constants import hcop_test_path, hgnc_test_path
 
 log = logging.getLogger(__name__)
@@ -46,7 +45,7 @@ class TemporaryCacheMixin(unittest.TestCase):
             hcop_file_path=hcop_test_path,
         )
 
-        cls.manager = QueryManager(connection=cls.connection)
+        cls.manager = Manager(connection=cls.connection)
 
     @classmethod
     def tearDownClass(cls):
@@ -62,6 +61,7 @@ class TestEnrich(TemporaryCacheMixin):
 
         :param pyhgnc.manager.models.HGNC model: The result from a search of the PyHGNC database
         """
+        self.assertIsNotNone(model)
         self.assertEqual('1659', str(model.identifier))
         self.assertEqual('CD33', model.symbol)
         self.assertEqual('CD33 molecule', model.name)
@@ -80,7 +80,7 @@ class TestEnrich(TemporaryCacheMixin):
 
         cd33_tuple = graph.add_node_from_data(protein(name='CD33', namespace='HGNC'))
 
-        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
+        cd33_model = get_node(graph, cd33_tuple, connection=self.manager)
         self.help_check_cd33_model(cd33_model)
 
     def test_get_hgnc_id_node(self):
@@ -88,7 +88,7 @@ class TestEnrich(TemporaryCacheMixin):
 
         cd33_tuple = graph.add_node_from_data(protein(identifier='1659', namespace='HGNC'))
 
-        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
+        cd33_model = get_node(graph, cd33_tuple, connection=self.manager)
         self.help_check_cd33_model(cd33_model)
 
     def test_get_rgd_node(self):
@@ -97,7 +97,7 @@ class TestEnrich(TemporaryCacheMixin):
         # CD33's MGI counterpart's identifier
         cd33_tuple = graph.add_node_from_data(protein(name='Cd33', namespace='RGD'))
 
-        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
+        cd33_model = get_node(graph, cd33_tuple, connection=self.manager)
         self.help_check_cd33_model(cd33_model)
 
     def test_get_rgd_id_node(self):
@@ -106,7 +106,7 @@ class TestEnrich(TemporaryCacheMixin):
         # CD33's RGD counterpart's identifier
         cd33_tuple = graph.add_node_from_data(protein(identifier='1596020', namespace='RGD'))
 
-        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
+        cd33_model = get_node(graph, cd33_tuple, connection=self.manager)
         self.help_check_cd33_model(cd33_model)
 
     def test_get_mgi_node(self):
@@ -115,7 +115,7 @@ class TestEnrich(TemporaryCacheMixin):
         # CD33's MGI counterpart's identifier
         cd33_tuple = graph.add_node_from_data(protein(name='Cd33', namespace='MGI'))
 
-        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
+        cd33_model = get_node(graph, cd33_tuple, connection=self.manager)
         self.help_check_cd33_model(cd33_model)
 
     def test_get_mgi_id_node(self):
@@ -124,7 +124,7 @@ class TestEnrich(TemporaryCacheMixin):
         # CD33's MGI counterpart's identifier
         cd33_tuple = graph.add_node_from_data(protein(identifier='99440', namespace='MGI'))
 
-        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
+        cd33_model = get_node(graph, cd33_tuple, connection=self.manager)
         self.help_check_cd33_model(cd33_model)
 
     def test_get_entrez_node(self):
@@ -133,7 +133,7 @@ class TestEnrich(TemporaryCacheMixin):
         # CD33's MGI counterpart's identifier
         cd33_tuple = graph.add_node_from_data(protein(identifier='945', namespace='EG'))
 
-        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
+        cd33_model = get_node(graph, cd33_tuple, connection=self.manager)
         self.help_check_cd33_model(cd33_model)
 
     def test_add_metadata(self):
