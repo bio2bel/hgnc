@@ -89,3 +89,6 @@ class Manager(DbManager, QueryManager):
         if connection is None or isinstance(connection, str):
             return Manager(connection=connection)
         return connection
+
+    def __repr__(self):
+        return '<{} connection={}>'.format(self.__class__.__name__, self.engine.url)
