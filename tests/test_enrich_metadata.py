@@ -13,7 +13,6 @@ from bio2bel_hgnc.enrich import (
 from pybel import BELGraph
 from pybel.constants import EQUIVALENT_TO, ORTHOLOGOUS, RELATION, TRANSCRIBED_TO, TRANSLATED_TO, unqualified_edge_code
 from pybel.dsl import gene, mirna, protein, rna
-from pybel.examples.sialic_acid_example import cd33
 from pybel.tokens import node_to_tuple
 from tests.constants import hcop_test_path, hgnc_test_path
 
@@ -138,19 +137,20 @@ class TestEnrich(TemporaryCacheMixin):
 
     def test_add_metadata(self):
         graph = BELGraph()
-        cd33_tuple = graph.add_node_from_data(cd33)
 
-        self.assertIn(cd33_tuple, graph)
-        self.assertIsNone(graph.get_node_label(cd33_tuple))
-        self.assertIsNone(graph.get_node_identifier(cd33_tuple))
+        cd33_test = protein(namespace='HGNC', name='CD33')
+        cd33_tuple = graph.add_node_from_data(cd33_test)
+
+        self.assertIn(cd33_tuple, graph, msg='Graph is missing CD33 protein node')
+        self.assertIsNone(graph.get_node_label(cd33_tuple), msg='CD33 should not have label information')
+        self.assertIsNone(graph.get_node_identifier(cd33_tuple), msg='CD33 should not have identifier information')
 
         add_metadata(graph, cd33_tuple, manager=self.manager)
 
-        self.assertIn(cd33_tuple, graph)
-        self.assertIsNotNone(graph.get_node_label(cd33_tuple))
+        self.assertIn(cd33_tuple, graph, msg='Graph somehow lost CD33 protein node')
 
-        self.assertEqual('CD33 molecule', graph.get_node_label(cd33_tuple))
-        self.assertEqual('1659', graph.get_node_identifier(cd33_tuple))
+        self.assertEqual('CD33 molecule', graph.get_node_label(cd33_tuple), msg='Graph should be enriched with label')
+        self.assertEqual('1659', graph.get_node_identifier(cd33_tuple), msg='Graph should be enriched with identifier')
 
     def test_add_equivalency(self):
         graph = BELGraph()

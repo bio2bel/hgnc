@@ -25,7 +25,7 @@ def get_node(graph, node, connection=None):
     :rtype: pyhgnc.manager.models.HGNC
     """
     manager = Manager.ensure(connection=connection)
-    manager.get_node(graph, node)
+    return manager.get_node(graph, node)
 
 
 def add_metadata(graph, node, manager=None):

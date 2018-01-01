@@ -55,6 +55,42 @@ class Manager(DbManager, QueryManager):
         results = self.hgnc(entrez=entrez_id)
         return _deal_with_nonsense(results)
 
+    def get_gene_by_mgi_id(self, mgi_id):
+        """Gets a HGNC gene by an orthologous MGI identifier
+
+        :param str mgi_id: MGI identifier
+        :rtype: Optional[pyhgnc.manager.models.HGNC]
+        """
+        raise NotImplementedError
+
+    def get_gene_by_mgi_symbol(self, mgi_symbol):
+        """Gets a HGNC gene by an orthologous MGI gene symbol
+
+        :param str mgi_symbol: MGI gene symbol
+        :rtype: Optional[pyhgnc.manager.models.HGNC]
+        """
+        # TODO how to deal with getting the MGI name to MGI identifiers mapping? Should this be part of PyHGNC, or something different?
+
+        raise NotImplementedError
+
+    def get_gene_by_rgd_id(self, rgd_id):
+        """Gets a HGNC gene by an orthologous RGD identifier
+
+        :param str rgd_id: RGD identifier
+        :rtype: Optional[pyhgnc.manager.models.HGNC]
+        """
+        raise NotImplementedError
+
+    def get_gene_by_rgd_symbol(self, rgd_symbol):
+        """Gets a HGNC gene by an orthologous RGD identifier
+
+        :param str rgd_symbol: RGD gene symbol
+        :rtype: Optional[pyhgnc.manager.models.HGNC]
+        """
+        # TODO how to deal with getting the RGD name to RGD identifiers mapping? Should this be part of PyHGNC, or something different?
+
+        raise NotImplementedError
+
     def get_node(self, graph, node):
         """Gets a node from the PyHGNC database, whether it has a HGNC, RGD, MGI, or EG identifier.
 
@@ -62,6 +98,7 @@ class Manager(DbManager, QueryManager):
         :param tuple node: A PyBEL node tuple
         :param Optional[pyhgnc.manager.query.QueryManager] manager: A PyHGNC database manager
         :rtype: pyhgnc.manager.models.HGNC
+        :raises: KeyError
         """
         data = graph.node[node]
 
@@ -82,6 +119,20 @@ class Manager(DbManager, QueryManager):
                 return self.get_gene_by_entrez_id(data[IDENTIFIER])
             elif NAME in data:
                 return self.get_gene_by_entrez_id(data[NAME])
+            raise KeyError
+
+        if namespace in {'MGI'}:
+            if IDENTIFIER in data:
+                return self.get_gene_by_mgi_id(data[IDENTIFIER])
+            elif NAME in data:
+                return self.get_gene_by_mgi_symbol(data[NAME])
+            raise KeyError
+
+        if namespace in {'RGD'}:
+            if IDENTIFIER in data:
+                return self.get_gene_by_rgd_id(data[IDENTIFIER])
+            elif NAME in data:
+                return self.get_gene_by_rgd_symbol(data[NAME])
             raise KeyError
 
     @staticmethod
