@@ -14,7 +14,7 @@ from pybel import BELGraph
 from pybel.constants import EQUIVALENT_TO, ORTHOLOGOUS, RELATION, TRANSCRIBED_TO, TRANSLATED_TO, unqualified_edge_code
 from pybel.dsl import gene, mirna, protein, rna
 from pybel.examples.sialic_acid_example import cd33
-from pybel.parser.canonicalize import node_to_tuple
+from pybel.tokens import node_to_tuple
 from tests.constants import hcop_test_path, hgnc_test_path
 
 log = logging.getLogger(__name__)
@@ -306,3 +306,11 @@ class TestEnrich(TemporaryCacheMixin):
         cd33_protein_tuple = node_to_tuple(cd33_protein)
         self.assertIn(cd33_protein_tuple, graph.edge[cd33_rna_tuple])
         self.assertIn(translate_code, graph.edge[cd33_rna_tuple][cd33_protein_tuple])
+
+    def test_enrich_gene_with_families(self):
+        """For genes, adds their corresponding families"""
+        raise NotImplementedError
+
+    def test_enrich_families_with_genes(self):
+        """For gene families, adds their member genes"""
+        raise NotImplementedError

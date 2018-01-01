@@ -9,10 +9,10 @@ import setuptools
 PACKAGES = setuptools.find_packages(where='src')
 META_PATH = os.path.join('src', 'bio2bel_hgnc', '__init__.py')
 INSTALL_REQUIRES = [
+    'pybel>=0.10.1',
     'click',
     'six',
     'pandas',
-    'pybel>=0.9.5',
     'pyhgnc',
 ]
 ENTRY_POINTS = {
