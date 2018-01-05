@@ -307,9 +307,24 @@ class TestEnrich(TemporaryCacheMixin):
         self.assertIn(cd33_protein_tuple, graph.edge[cd33_rna_tuple])
         self.assertIn(translate_code, graph.edge[cd33_rna_tuple][cd33_protein_tuple])
 
-    def test_enrich_gene_with_families(self):
+    def test_enrich_genes_with_families(self):
         """For genes, adds their corresponding families"""
-        raise NotImplementedError
+        graph = BELGraph()
+        cd33_gene = gene(name='CD33', namespace='HGNC')
+        cd33_gene_tuple = graph.add_node_from_data(cd33_gene)
+
+        self.assertEqual(1, graph.number_of_nodes())
+        self.assertEqual(0, graph.number_of_edges())
+
+        self.manager.enrich_genes_with_families(graph)
+
+        self.assertEqual(4, graph.number_of_nodes())
+        self.assertEqual(3, graph.number_of_edges())
+
+        for x in ["CD molecules", "V-set domain containing", "Sialic acid binding Ig like lectins"]:
+            g = gene(namespace='HGNCFAM', name=x)
+            self.assertTrue(graph.has_node_with_data(g))
+            self.assertIn(g.as_tuple(), graph.edge[cd33_gene_tuple])
 
     def test_enrich_families_with_genes(self):
         """For gene families, adds their member genes"""
