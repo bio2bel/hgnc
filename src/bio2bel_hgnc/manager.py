@@ -2,15 +2,10 @@
 
 from pybel.constants import IDENTIFIER, NAME, NAMESPACE
 from pyhgnc.manager.database import DbManager
-from pyhgnc.manager.models import AliasName, AliasSymbol, GeneFamily, HGNC
 from pyhgnc.manager.query import QueryManager
 
 __all__ = [
     'Manager',
-    'HGNC',
-    'AliasSymbol',
-    'AliasName',
-    'GeneFamily'
 ]
 
 
