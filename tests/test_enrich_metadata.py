@@ -7,6 +7,7 @@ import unittest
 
 import pyhgnc
 from bio2bel_hgnc import Manager
+from bio2bel_hgnc.constants import GENE_FAMILY_KEYWORD
 from bio2bel_hgnc.enrich import (
     add_metadata, add_node_central_dogma, add_node_equivalencies, add_node_orthologies, get_node,
 )
@@ -322,9 +323,27 @@ class TestEnrich(TemporaryCacheMixin):
         self.assertEqual(3, graph.number_of_edges())
 
         for x in ["CD molecules", "V-set domain containing", "Sialic acid binding Ig like lectins"]:
-            g = gene(namespace='HGNCFAM', name=x)
+            g = gene(namespace=GENE_FAMILY_KEYWORD, name=x)
             self.assertTrue(graph.has_node_with_data(g))
             self.assertIn(g.as_tuple(), graph.edge[cd33_gene_tuple])
+
+    def test_enrich_family_with_genes(self):
+        graph = BELGraph()
+        f = gene(name="CD molecules", namespace=GENE_FAMILY_KEYWORD)
+        graph.add_node_from_data(f)
+
+        self.assertEqual(1, graph.number_of_nodes())
+        self.assertEqual(0, graph.number_of_edges())
+
+        self.manager.enrich_families_with_genes(graph)
+
+        self.assertEqual(3, graph.number_of_nodes())
+        self.assertEqual(2, graph.number_of_edges())
+
+        for x in ["CD33", 'CD34']:
+            g = gene(namespace='HGNC', name=x)
+            self.assertTrue(graph.has_node_with_data(g))
+            self.assertIn(f.as_tuple(), graph.edge[g.as_tuple()])
 
     def test_enrich_families_with_genes(self):
         """For gene families, adds their member genes"""

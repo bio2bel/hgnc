@@ -4,6 +4,7 @@ from pybel.constants import FUNCTION, GENE, IDENTIFIER, IS_A, NAME, NAMESPACE
 from pybel.dsl import gene
 from pyhgnc.manager.database import DbManager
 from pyhgnc.manager.query import QueryManager
+from .constants import GENE_FAMILY_KEYWORD
 
 __all__ = [
     'Manager',
@@ -23,11 +24,11 @@ def _deal_with_nonsense(results):
 def family_to_gene(family):
     """Converts a PyHGNC Gene Family model to a PyBEL gene
 
-    :param family: 
+    :param family:
     :rtype: pybel.dsl.gene
     """
     return gene(
-        namespace='HGNCFAM',
+        namespace=GENE_FAMILY_KEYWORD,
         identifier=family.family_identifier,
         name=family.family_name
     )
@@ -165,6 +166,37 @@ class Manager(DbManager, QueryManager):
 
             for family in m.gene_families:
                 graph.add_unqualified_edge(n, family_to_gene(family), IS_A)
+
+    def get_family_by_id(self, family_identifier):
+        """Gets a gene family by its identifier
+
+        :param str family_identifier:
+        :rtype: Optional[GeneFamily]
+        """
+        results = self.gene_family(family_identifier=family_identifier)
+        return _deal_with_nonsense(results)
+
+    def get_family_by_name(self, family_name):
+        results = self.gene_family(family_name=family_name)
+        return _deal_with_nonsense(results)
+
+    def enrich_families_with_genes(self, graph):
+        for n, data in graph.nodes(data=True):
+            if data[FUNCTION] != GENE:
+                continue
+
+            if data.get(NAMESPACE) != GENE_FAMILY_KEYWORD:
+                continue
+
+            if IDENTIFIER in data:
+                m = self.get_family_by_id(data[IDENTIFIER])
+            elif NAME in data:
+                m = self.get_family_by_name(data[NAME])
+            else:
+                raise ValueError
+
+            for g in m.hgncs:
+                graph.add_unqualified_edge(gene(namespace='HGNC', name=g.symbol, identifier=g.identifier), n, IS_A)
 
     @staticmethod
     def ensure(connection=None):

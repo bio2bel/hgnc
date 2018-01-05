@@ -9,6 +9,8 @@ MODULE_NAME = 'hgnc'
 DATA_DIR = get_data_dir(MODULE_NAME)
 DEFAULT_CACHE_CONNECTION = get_connection(MODULE_NAME)
 
+GENE_FAMILY_KEYWORD = 'HGNCFAM'
+
 #: Encodings from https://www.genenames.org/cgi-bin/statistics
 encodings = {
     # protein-coding gene
