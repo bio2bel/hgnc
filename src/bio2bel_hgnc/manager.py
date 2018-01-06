@@ -148,7 +148,7 @@ class Manager(DbManager, QueryManager):
     def enrich_genes_with_families(self, graph):
         """Enrich genes in the BEL graph with their families
 
-        :param pybel.BELGraph graph:
+        :type graph: pybel.BELGraph
         """
         for n, data in graph.nodes(data=True):
             if data[FUNCTION] != GENE:
@@ -177,10 +177,19 @@ class Manager(DbManager, QueryManager):
         return _deal_with_nonsense(results)
 
     def get_family_by_name(self, family_name):
+        """Gets a gene family by its name
+
+        :param str family_name:
+        :rtype: Optional[GeneFamily]
+        """
         results = self.gene_family(family_name=family_name)
         return _deal_with_nonsense(results)
 
     def enrich_families_with_genes(self, graph):
+        """Enrich gene families in the BEL graph with their member genes
+
+        :type graph: pybel.BELGraph
+        """
         for n, data in graph.nodes(data=True):
             if data[FUNCTION] != GENE:
                 continue
