@@ -25,7 +25,7 @@ def _deal_with_nonsense(results):
 def family_to_gene(family):
     """Converts a PyHGNC Gene Family model to a PyBEL gene
 
-    :param family:
+    :param pyhgnc.manager.models.GeneFamily family: An HGNC Gene Family model
     :rtype: pybel.dsl.gene
     """
     return gene(
@@ -63,6 +63,11 @@ class Manager(DbManager, QueryManager):
         return _deal_with_nonsense(results)
 
     def get_gene_by_entrez_id(self, entrez_id):
+        """Gets a HGNC gene by its Entrez gene identifier
+
+        :param str entrez_id: The Entrez gene identifier
+        :rtype: Optional[pyhgnc.manager.models.HGNC]
+        """
         results = self.hgnc(entrez=entrez_id)
         return _deal_with_nonsense(results)
 
@@ -149,7 +154,7 @@ class Manager(DbManager, QueryManager):
     def enrich_genes_with_families(self, graph):
         """Enrich genes in the BEL graph with their families
 
-        :type graph: pybel.BELGraph
+        :param pybel.BELGraph graph: The BEL graph to enrich
         """
         for n, data in graph.nodes(data=True):
             if data[FUNCTION] != GENE:
@@ -171,7 +176,7 @@ class Manager(DbManager, QueryManager):
     def get_family_by_id(self, family_identifier):
         """Gets a gene family by its identifier
 
-        :param str family_identifier:
+        :param str family_identifier: The identifier of a HGNC Gene Family
         :rtype: Optional[GeneFamily]
         """
         results = self.gene_family(family_identifier=family_identifier)
@@ -180,7 +185,7 @@ class Manager(DbManager, QueryManager):
     def get_family_by_name(self, family_name):
         """Gets a gene family by its name
 
-        :param str family_name:
+        :param str family_name: The name of a HGNC Gene Family
         :rtype: Optional[GeneFamily]
         """
         results = self.gene_family(family_name=family_name)
@@ -189,7 +194,7 @@ class Manager(DbManager, QueryManager):
     def enrich_families_with_genes(self, graph):
         """Enrich gene families in the BEL graph with their member genes
 
-        :type graph: pybel.BELGraph
+        :param pybel.BELGraph graph: The BEL graph to enrich
         """
         for n, data in graph.nodes(data=True):
             if data[FUNCTION] != GENE:
@@ -230,6 +235,10 @@ class Manager(DbManager, QueryManager):
 
     @staticmethod
     def ensure(connection=None):
+        """
+        :param Optional[str or Manager] connection:
+        :rtype: Manager
+        """
         if connection is None or isinstance(connection, str):
             return Manager(connection=connection)
         return connection
