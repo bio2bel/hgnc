@@ -3,3 +3,4 @@ click
 six
 pandas
 pyhgnc
+bio2bel
