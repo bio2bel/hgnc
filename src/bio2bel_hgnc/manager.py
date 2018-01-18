@@ -5,6 +5,7 @@ from pybel.dsl import gene
 from pyhgnc.manager.database import DbManager
 from pyhgnc.manager.query import QueryManager
 from .constants import GENE_FAMILY_KEYWORD
+from .models import HGNC
 
 __all__ = [
     'Manager',
@@ -206,6 +207,26 @@ class Manager(DbManager, QueryManager):
 
             for g in m.hgncs:
                 graph.add_unqualified_edge(gene(namespace='HGNC', name=g.symbol, identifier=g.identifier), n, IS_A)
+
+    def build_hgnc_id_symbol_mapping(self):
+        """Builds a mapping from HGNC identifier to HGNC symbol
+
+        :rtype: dict[str,str]
+        """
+        return {
+            str(identifier): symbol
+            for identifier, symbol in self.session.query(HGNC.identifier, HGNC.symbol).all()
+        }
+
+    def build_hgnc_symbol_id_mapping(self):
+        """Builds a mapping from HGNC symbol to HGNC identifier
+
+        :rtype: dict[str,str]
+        """
+        return {
+            symbol: str(identifier)
+            for symbol, identifier in self.session.query(HGNC.symbol, HGNC.identifier).all()
+        }
 
     @staticmethod
     def ensure(connection=None):
