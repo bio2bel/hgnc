@@ -6,6 +6,7 @@ Welcome to Bio2BEL HGNC's documentation!
    :caption: Contents:
 
    enrich
+   manager
 
 
 Indices and tables
