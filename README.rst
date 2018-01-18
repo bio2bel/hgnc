@@ -39,5 +39,5 @@ Acknowledgements
     :alt: Coverage Status
 
 .. |docs| image:: http://readthedocs.org/projects/bio2bel-hgnc/badge/?version=latest
-    :target: http://bio2bel.readthedocs.io/projects/ExPASy/en/latest/?badge=latest
+    :target: http://bio2bel.readthedocs.io/projects/hgnc/en/latest/?badge=latest
     :alt: Documentation Status
