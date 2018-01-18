@@ -177,7 +177,7 @@ class Manager(DbManager, QueryManager):
         """Gets a gene family by its identifier
 
         :param str family_identifier: The identifier of a HGNC Gene Family
-        :rtype: Optional[GeneFamily]
+        :rtype: Optional[pyhgnc.manager.models.GeneFamily]
         """
         results = self.gene_family(family_identifier=family_identifier)
         return _deal_with_nonsense(results)
@@ -186,7 +186,7 @@ class Manager(DbManager, QueryManager):
         """Gets a gene family by its name
 
         :param str family_name: The name of a HGNC Gene Family
-        :rtype: Optional[GeneFamily]
+        :rtype: Optional[pyhgnc.manager.models.GeneFamily]
         """
         results = self.gene_family(family_name=family_name)
         return _deal_with_nonsense(results)
@@ -236,7 +236,8 @@ class Manager(DbManager, QueryManager):
     @staticmethod
     def ensure(connection=None):
         """
-        :param Optional[str or Manager] connection:
+        :param connection: A connection string, a manager, or none to use the default manager
+        :type connection: Optional[str or Manager]
         :rtype: Manager
         """
         if connection is None or isinstance(connection, str):
