@@ -4,6 +4,7 @@ from pybel.constants import FUNCTION, GENE, IDENTIFIER, IS_A, NAME, NAMESPACE
 from pybel.dsl import gene
 from pyhgnc.manager.database import DbManager
 from pyhgnc.manager.query import QueryManager
+
 from .constants import GENE_FAMILY_KEYWORD
 from .models import HGNC
 
@@ -244,6 +245,28 @@ class Manager(DbManager, QueryManager):
                 for uniprot in uniprots
             }
             for symbol, uniprots in self.session.query(HGNC.symbol, HGNC.uniprots).all()
+        }
+
+    def build_uniprot_id_hgnc_id_mapping(self):
+        """Builds mapping from UniProt identifiers to HGNC identifier
+
+        :rtype: dict[str,str]
+        """
+        return {
+            str(uniprot): hgnc_id
+            for uniprots, hgnc_id in self.session.query(HGNC.uniprots, HGNC.identifier).all()
+            for uniprot in uniprots
+        }
+
+    def build_uniprot_ids_hgnc_symbol_mapping(self):
+        """Builds mapping from UniProt identifier to HGNC symbol
+
+        :rtype: dict[str,str]
+        """
+        return {
+            str(uniprot): symbol
+            for uniprots, symbol in self.session.query(HGNC.uniprots, HGNC.symbol).all()
+            for uniprot in uniprots
         }
 
     def build_hgnc_id_uniprot_ids_mapping(self):
