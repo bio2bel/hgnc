@@ -282,9 +282,8 @@ class Manager(DbManager, QueryManager):
         :rtype: dict[str,str]
         """
         return {
-            uniprot.uniprotid: hgnc_id
-            for uniprots, hgnc_id in self.session.query(HGNC.uniprots, HGNC.identifier).all()
-            for uniprot in uniprots
+            uniprot_id: hgnc_id
+            for hgnc_id, uniprot_id in self.session.query(HGNC.identifier, UniProt.uniprotid).all()
         }
 
     def build_uniprot_id_hgnc_symbol_mapping(self):
@@ -293,7 +292,6 @@ class Manager(DbManager, QueryManager):
         :rtype: dict[str,str]
         """
         return {
-            uniprot.uniprotid: symbol
-            for uniprots, symbol in self.session.query(HGNC.uniprots, HGNC.symbol).all()
-            for uniprot in uniprots
+            uniprot_id: symbol
+            for uniprots, symbol in self.session.query(HGNC.symbol, UniProt.uniprotid).all()
         }
