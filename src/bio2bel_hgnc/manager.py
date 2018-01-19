@@ -6,7 +6,7 @@ from pyhgnc.manager.database import DbManager
 from pyhgnc.manager.query import QueryManager
 
 from .constants import GENE_FAMILY_KEYWORD
-from .models import HGNC
+from .models import HGNC, UniProt
 
 __all__ = [
     'Manager',
@@ -293,5 +293,5 @@ class Manager(DbManager, QueryManager):
         """
         return {
             uniprot_id: symbol
-            for uniprots, symbol in self.session.query(HGNC.symbol, UniProt.uniprotid).all()
+            for symbol, uniprot_id in self.session.query(HGNC.symbol, UniProt.uniprotid).all()
         }
