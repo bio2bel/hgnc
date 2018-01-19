@@ -233,6 +233,32 @@ class Manager(DbManager, QueryManager):
             for symbol, identifier in self.session.query(HGNC.symbol, HGNC.identifier).all()
         }
 
+    def build_hgnc_symbol_uniprot_ids_mapping(self):
+        """Builds mapping from HGNC symbol to UniProt identifiers
+
+        :rtype: dict[str,set[str]]
+        """
+        return {
+            symbol: {
+                uniprot.uniprotid
+                for uniprot in uniprots
+            }
+            for symbol, uniprots in self.session.query(HGNC.symbol, HGNC.uniprots).all()
+        }
+
+    def build_hgnc_id_uniprot_ids_mapping(self):
+        """Builds mapping from HGNC identifier to UniProt identifiers
+
+        :rtype: dict[str,set[str]]
+        """
+        return {
+            identifier: {
+                uniprot.uniprotid
+                for uniprot in uniprots
+            }
+            for identifier, uniprots in self.session.query(HGNC.identifier, HGNC.uniprots).all()
+        }
+
     @staticmethod
     def ensure(connection=None):
         """
