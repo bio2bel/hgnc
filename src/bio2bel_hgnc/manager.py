@@ -282,7 +282,7 @@ class Manager(DbManager, QueryManager):
         :rtype: dict[str,str]
         """
         return {
-            str(uniprot): hgnc_id
+            uniprot.uniprotid: hgnc_id
             for uniprots, hgnc_id in self.session.query(HGNC.uniprots, HGNC.identifier).all()
             for uniprot in uniprots
         }
@@ -293,7 +293,7 @@ class Manager(DbManager, QueryManager):
         :rtype: dict[str,str]
         """
         return {
-            str(uniprot): symbol
+            uniprot.uniprotid: symbol
             for uniprots, symbol in self.session.query(HGNC.uniprots, HGNC.symbol).all()
             for uniprot in uniprots
         }
