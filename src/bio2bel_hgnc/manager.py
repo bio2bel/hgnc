@@ -214,6 +214,22 @@ class Manager(DbManager, QueryManager):
             for g in m.hgncs:
                 graph.add_unqualified_edge(gene(namespace='HGNC', name=g.symbol, identifier=g.identifier), n, IS_A)
 
+    @staticmethod
+    def ensure(connection=None):
+        """
+        :param connection: A connection string, a manager, or none to use the default manager
+        :type connection: Optional[str or Manager]
+        :rtype: Manager
+        """
+        if connection is None or isinstance(connection, str):
+            return Manager(connection=connection)
+        return connection
+
+    def __repr__(self):
+        return '<{} connection={}>'.format(self.__class__.__name__, self.engine.url)
+
+    """ Mapping dictionaries"""
+
     def build_hgnc_id_symbol_mapping(self):
         """Builds a mapping from HGNC identifier to HGNC symbol
 
@@ -247,28 +263,6 @@ class Manager(DbManager, QueryManager):
             for symbol, uniprots in self.session.query(HGNC.symbol, HGNC.uniprots).all()
         }
 
-    def build_uniprot_id_hgnc_id_mapping(self):
-        """Builds mapping from UniProt identifiers to HGNC identifier
-
-        :rtype: dict[str,str]
-        """
-        return {
-            str(uniprot): hgnc_id
-            for uniprots, hgnc_id in self.session.query(HGNC.uniprots, HGNC.identifier).all()
-            for uniprot in uniprots
-        }
-
-    def build_uniprot_ids_hgnc_symbol_mapping(self):
-        """Builds mapping from UniProt identifier to HGNC symbol
-
-        :rtype: dict[str,str]
-        """
-        return {
-            str(uniprot): symbol
-            for uniprots, symbol in self.session.query(HGNC.uniprots, HGNC.symbol).all()
-            for uniprot in uniprots
-        }
-
     def build_hgnc_id_uniprot_ids_mapping(self):
         """Builds mapping from HGNC identifier to UniProt identifiers
 
@@ -282,16 +276,24 @@ class Manager(DbManager, QueryManager):
             for identifier, uniprots in self.session.query(HGNC.identifier, HGNC.uniprots).all()
         }
 
-    @staticmethod
-    def ensure(connection=None):
-        """
-        :param connection: A connection string, a manager, or none to use the default manager
-        :type connection: Optional[str or Manager]
-        :rtype: Manager
-        """
-        if connection is None or isinstance(connection, str):
-            return Manager(connection=connection)
-        return connection
+    def build_uniprot_id_hgnc_id_mapping(self):
+        """Builds mapping from UniProt identifiers to HGNC identifier
 
-    def __repr__(self):
-        return '<{} connection={}>'.format(self.__class__.__name__, self.engine.url)
+        :rtype: dict[str,str]
+        """
+        return {
+            str(uniprot): hgnc_id
+            for uniprots, hgnc_id in self.session.query(HGNC.uniprots, HGNC.identifier).all()
+            for uniprot in uniprots
+        }
+
+    def build_uniprot_id_hgnc_symbol_mapping(self):
+        """Builds mapping from UniProt identifier to HGNC symbol
+
+        :rtype: dict[str,str]
+        """
+        return {
+            str(uniprot): symbol
+            for uniprots, symbol in self.session.query(HGNC.uniprots, HGNC.symbol).all()
+            for uniprot in uniprots
+        }
