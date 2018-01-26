@@ -4,4 +4,3 @@ six
 pandas
 pyhgnc
 bio2bel
-pyhgnc
