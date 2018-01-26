@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import logging
 import pyhgnc.manager.models
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, IS_A, NAME, NAMESPACE
 from pybel.dsl import gene
@@ -8,6 +9,8 @@ from pyhgnc.manager.query import QueryManager
 
 from .constants import GENE_FAMILY_KEYWORD
 from .models import HGNC, UniProt
+
+log = logging.getLogger(__name__)
 
 __all__ = [
     'Manager',
