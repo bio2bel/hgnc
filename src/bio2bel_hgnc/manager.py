@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import pyhgnc.manager.models
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, IS_A, NAME, NAMESPACE
 from pybel.dsl import gene
 from pyhgnc.manager.database import DbManager
@@ -39,11 +40,23 @@ def family_to_gene(family):
 class Manager(DbManager, QueryManager):
     """An extended version of the PyHGNC manager to have useful functions"""
 
-    def populate(self, *args, **kwargs):
-        self.db_import(*args, **kwargs)
+    def create_all(self, checkfirst=True):
+        self._create_tables(checkfirst=checkfirst)
+
+    def populate(self, silent=False, hgnc_file_path=None, hcop_file_path=None, low_memory=False):
+        json_data = self.load_hgnc_json(hgnc_file_path=hgnc_file_path)
+        self.insert_hgnc(hgnc_dict=json_data, silent=silent, low_memory=low_memory)
+        self.insert_hcop(silent=silent, hcop_file_path=hcop_file_path)
+
+    def db_import(self, silent=False, hgnc_file_path=None, hcop_file_path=None, low_memory=False):
+        raise NotImplemented('call manager.populate instead')
+
+    def _drop_tables(self):
+        raise NotImplemented('call manager.drop_all instead')
 
     def drop_all(self):
-        self._drop_tables()
+        log.info('drop tables in {}'.format(self.engine.url))
+        pyhgnc.manager.models.Base.metadata.drop_all(self.engine, checkfirst=True)
 
     def get_gene_by_hgnc_symbol(self, hgnc_symbol):
         """Gets a gene by the symbol
