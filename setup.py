@@ -15,6 +15,7 @@ INSTALL_REQUIRES = [
     'pandas',
     'pyhgnc',
     'bio2bel',
+    'pyhgnc',
 ]
 ENTRY_POINTS = {
     'bio2bel': [
