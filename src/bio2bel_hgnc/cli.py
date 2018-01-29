@@ -1,9 +1,24 @@
 # -*- coding: utf-8 -*-
 
+import logging
+
 import click
 
 from .constants import DEFAULT_CACHE_CONNECTION
 from .manager import Manager
+
+log = logging.getLogger(__name__)
+
+
+def set_debug(level):
+    logging.basicConfig(level=level, format="%(asctime)s - %(levelname)s - %(message)s")
+
+
+def set_debug_param(debug):
+    if debug == 1:
+        set_debug(20)
+    elif debug == 2:
+        set_debug(10)
 
 
 @click.group()
@@ -13,8 +28,12 @@ def main():
 
 @main.command()
 @click.option('-c', '--connection', help="Defaults to {}".format(DEFAULT_CACHE_CONNECTION))
-def populate(connection):
+@click.option('-v', '--debug', count=True, help="Turn on debugging.")
+def populate(connection, debug):
     """Populate the database"""
+
+    set_debug_param(debug)
+
     manager = Manager(connection=connection)
     manager.create_all()
     manager.populate()
@@ -22,8 +41,12 @@ def populate(connection):
 
 @main.command()
 @click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
-def drop(connection):
+@click.option('-v', '--debug', count=True, help="Turn on debugging.")
+def drop(connection, debug):
     """Drops the database"""
+
+    set_debug_param(debug)
+
     m = Manager(connection=connection)
     m.drop_all()
 
