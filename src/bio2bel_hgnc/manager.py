@@ -246,6 +246,17 @@ class Manager(DbManager, QueryManager):
 
     """ Mapping dictionaries"""
 
+    def build_entrez_id_symbol_mapping(self):
+        """Builds a mapping from ENTREZ identifier to HGNC symbol
+
+        :rtype: dict[str,str]
+        """
+        return {
+            identifier: symbol
+            for identifier, symbol in self.session.query(HGNC.entrez, HGNC.symbol).all()
+        }
+
+
     def build_hgnc_id_symbol_mapping(self):
         """Builds a mapping from HGNC identifier to HGNC symbol
 
