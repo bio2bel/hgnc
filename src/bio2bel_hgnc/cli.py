@@ -16,6 +16,7 @@ def main():
 def populate(connection):
     """Populate the database"""
     manager = Manager(connection=connection)
+    manager.create_all()
     manager.populate()
 
 
