@@ -26,7 +26,7 @@ def _deal_with_nonsense(results):
         return
 
     if 1 < len(results):
-        raise ValueError
+        raise ValueError('{}'.format(results))
 
     return results[0]
 
