@@ -1,13 +1,17 @@
 # -*- coding: utf-8 -*-
 
 import logging
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
 import pyhgnc.manager.models
+from bio2bel.utils import get_connection
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, IS_A, NAME, NAMESPACE
 from pybel.dsl import gene
 from pyhgnc.manager.database import DbManager
 from pyhgnc.manager.query import QueryManager
-
-from .constants import GENE_FAMILY_KEYWORD
+from .constants import GENE_FAMILY_KEYWORD, MODULE_NAME
 from .models import HGNC, UniProt
 
 log = logging.getLogger(__name__)
@@ -42,6 +46,16 @@ def family_to_gene(family):
 
 class Manager(DbManager, QueryManager):
     """An extended version of the PyHGNC manager to have useful functions"""
+
+    def __init__(self, connection=None):
+        """
+        :param Optional[str] connection: The connection string
+        """
+        self.connection = get_connection(MODULE_NAME, connection=connection)
+        self.engine = create_engine(self.connection)
+        self.session_maker = sessionmaker(bind=self.engine, autoflush=False, expire_on_commit=False)
+        self.session = self.session_maker()
+        self.create_all()
 
     def create_all(self, checkfirst=True):
         self._create_tables(checkfirst=checkfirst)
