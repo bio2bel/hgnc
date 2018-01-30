@@ -1,5 +1,5 @@
-Bio2BEL HGNC |build| |coverage| |docs|
-======================================
+Bio2BEL HGNC |build| |coverage| |docs| |zenodo|
+===============================================
 This package creates:
 
 - HGNC BEL namespace
@@ -41,3 +41,6 @@ Acknowledgements
 .. |docs| image:: http://readthedocs.org/projects/bio2bel-hgnc/badge/?version=latest
     :target: http://bio2bel.readthedocs.io/projects/hgnc/en/latest/?badge=latest
     :alt: Documentation Status
+
+.. |zenodo| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.1162644.svg
+    :target: https://doi.org/10.5281/zenodo.1162644
