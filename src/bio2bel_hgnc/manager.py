@@ -3,7 +3,7 @@
 import logging
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import scoped_session, sessionmaker
 
 import pyhgnc.manager.models
 from bio2bel.utils import get_connection
@@ -54,7 +54,7 @@ class Manager(DbManager, QueryManager):
         self.connection = get_connection(MODULE_NAME, connection=connection)
         self.engine = create_engine(self.connection)
         self.session_maker = sessionmaker(bind=self.engine, autoflush=False, expire_on_commit=False)
-        self.session = self.session_maker()
+        self.session = scoped_session(self.session_maker)
         self.create_all()
 
     def create_all(self, checkfirst=True):
