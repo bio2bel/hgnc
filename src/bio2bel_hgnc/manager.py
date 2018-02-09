@@ -55,7 +55,6 @@ class Manager(DbManager, QueryManager):
         self.engine = create_engine(self.connection)
         self.session_maker = sessionmaker(bind=self.engine, autoflush=False, expire_on_commit=False)
         self.session = scoped_session(self.session_maker)
-        self.create_all()
 
     def create_all(self, checkfirst=True):
         self._create_tables(checkfirst=checkfirst)

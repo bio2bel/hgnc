@@ -21,9 +21,9 @@ def set_debug_param(debug):
         set_debug(10)
 
 
-@click.group()
+@click.group(help='Convert HGNC to BEL. Default connection at {}'.format(DEFAULT_CACHE_CONNECTION))
 def main():
-    """HGNC to BEL"""
+    pass
 
 
 @main.command()
@@ -31,10 +31,11 @@ def main():
 @click.option('-v', '--debug', count=True, help="Turn on debugging.")
 def populate(connection, debug):
     """Populate the database"""
-
     set_debug_param(debug)
 
     manager = Manager(connection=connection)
+    log.info('connected to %s', manager.engine.url)
+
     manager.create_all()
     manager.populate()
 
@@ -44,7 +45,6 @@ def populate(connection, debug):
 @click.option('-v', '--debug', count=True, help="Turn on debugging.")
 def drop(connection, debug):
     """Drops the database"""
-
     set_debug_param(debug)
 
     m = Manager(connection=connection)
@@ -53,11 +53,13 @@ def drop(connection, debug):
 
 @main.command()
 @click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
-@click.option('-v', '--debug', is_flag=True)
+@click.option('-v', '--debug', count=True, help='Turn on debugging')
 @click.option('-p', '--port')
 @click.option('-h', '--host')
 def web(connection, debug, port, host):
     """Run the web app"""
+    set_debug_param(debug)
+
     from .web import create_app
     app = create_app(connection=connection, url='/')
     app.run(host=host, port=port, debug=debug)

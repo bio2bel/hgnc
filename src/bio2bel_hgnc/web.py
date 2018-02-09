@@ -6,9 +6,11 @@ when pip installing
 
 .. source-code:: sh
 
-    pip install bio2bel_expasy[web]
+    pip install bio2bel_hgnc[web]
 
 """
+
+import logging
 
 import flask_admin
 from flask import Flask
@@ -16,6 +18,8 @@ from flask_admin.contrib.sqla import ModelView
 
 from .manager import Manager
 from .models import GeneFamily, HGNC
+
+log = logging.getLogger(__name__)
 
 
 def add_admin(app, session, **kwargs):
@@ -34,6 +38,8 @@ def create_app(connection=None, url=None):
     """
     app = Flask(__name__)
     manager = Manager(connection=connection)
+    log.info('connected to %s', manager.engine.url)
+
     add_admin(app, manager.session, url=url)
     return app
 
