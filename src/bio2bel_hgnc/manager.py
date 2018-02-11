@@ -2,15 +2,15 @@
 
 import logging
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session, sessionmaker
-
 import pyhgnc.manager.models
 from bio2bel.utils import get_connection
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, IS_A, NAME, NAMESPACE
 from pybel.dsl import gene
 from pyhgnc.manager.database import DbManager
 from pyhgnc.manager.query import QueryManager
+from sqlalchemy import create_engine
+from sqlalchemy.orm import scoped_session, sessionmaker
+
 from .constants import GENE_FAMILY_KEYWORD, MODULE_NAME
 from .models import HGNC, UniProt
 
@@ -335,6 +335,6 @@ class Manager(DbManager, QueryManager):
         :rtype: set
         """
         return {
-            symbol
+            _deal_with_nonsense(symbol)
             for symbol in self.session.query(HGNC.symbol).all()
         }
