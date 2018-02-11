@@ -269,7 +269,6 @@ class Manager(DbManager, QueryManager):
             for identifier, symbol in self.session.query(HGNC.entrez, HGNC.symbol).all()
         }
 
-
     def build_hgnc_id_symbol_mapping(self):
         """Builds a mapping from HGNC identifier to HGNC symbol
 
@@ -328,4 +327,14 @@ class Manager(DbManager, QueryManager):
         return {
             uniprot_id: symbol
             for symbol, uniprot_id in self.session.query(HGNC.symbol, UniProt.uniprotid).all()
+        }
+
+    def get_all_hgnc_symbols(self):
+        """Returns the set of hgnc symbols in PyHGNC
+
+        :rtype: set
+        """
+        return {
+            symbol
+            for symbol in self.session.query(HGNC.symbol).all()
         }
