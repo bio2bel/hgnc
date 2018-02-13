@@ -200,6 +200,10 @@ class Manager(DbManager, QueryManager):
             else:
                 raise ValueError
 
+            if m is None:
+                log.info('gene not found: %s', data)
+                continue
+
             for family in m.gene_families:
                 graph.add_unqualified_edge(n, family_to_gene(family), IS_A)
 
@@ -239,6 +243,10 @@ class Manager(DbManager, QueryManager):
                 m = self.get_family_by_name(data[NAME])
             else:
                 raise ValueError
+
+            if m is None:
+                log.info('family not found: %s', data)
+                continue
 
             for g in m.hgncs:
                 graph.add_unqualified_edge(gene(namespace='HGNC', name=g.symbol, identifier=g.identifier), n, IS_A)
