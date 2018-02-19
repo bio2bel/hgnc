@@ -132,6 +132,13 @@ class Manager(DbManager, QueryManager):
     def count_uniprots(self):
         return self.session.query(UniProt).count()
 
+    def summarize(self):
+        """Returns a summary dictionary over the content of the database
+
+        :rtype: dict[str,int]
+        """
+        return dict(genes=self.count_genes(), families=self.count_families(), uniprots=self.count_uniprots())
+
     def _drop_tables(self):
         raise NotImplemented('call manager.drop_all instead')
 
