@@ -27,6 +27,10 @@ __all__ = [
 
 
 def _deal_with_nonsense(results):
+    """
+    :param list[X] results:
+    :rtype: Optional[X]
+    """
     if not results:
         return
 
@@ -118,6 +122,15 @@ class Manager(DbManager, QueryManager):
 
     def db_import(self, silent=False, hgnc_file_path=None, hcop_file_path=None, low_memory=False):
         raise NotImplemented('call manager.populate instead')
+
+    def count_genes(self):
+        return self.session.query(HGNC).count()
+
+    def count_families(self):
+        return self.session.query(GeneFamily).count()
+
+    def count_uniprots(self):
+        return self.session.query(UniProt).count()
 
     def _drop_tables(self):
         raise NotImplemented('call manager.drop_all instead')
