@@ -1,18 +1,23 @@
 # -*- coding: utf-8 -*-
 
 import logging
+from collections import Counter
 
-import pyhgnc.manager.models
-from bio2bel.utils import get_connection
-from pybel.constants import FUNCTION, GENE, IDENTIFIER, IS_A, NAME, NAMESPACE
-from pybel.dsl import gene
-from pyhgnc.manager.database import DbManager
-from pyhgnc.manager.query import QueryManager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
-from .constants import GENE_FAMILY_KEYWORD, MODULE_NAME
-from .models import HGNC, UniProt
+import pyhgnc.manager.models
+from bio2bel.utils import get_connection
+from pybel import BELGraph, to_bel
+from pybel.constants import FUNCTION, GENE, IDENTIFIER, IS_A, NAME, NAMESPACE, NAMESPACE_DOMAIN_GENE
+from pybel.dsl import gene as gene_dsl
+from pybel.resources import get_latest_arty_namespace, write_namespace
+from pybel.resources.arty import get_today_arty_knowledge, get_today_arty_namespace
+from pybel.resources.deploy import deploy_knowledge, deploy_namespace
+from pyhgnc.manager.database import DbManager
+from pyhgnc.manager.query import QueryManager
+from .constants import GENE_FAMILY_KEYWORD, MODULE_NAME, encodings
+from .models import GeneFamily, HGNC, UniProt
 
 log = logging.getLogger(__name__)
 
@@ -31,16 +36,63 @@ def _deal_with_nonsense(results):
     return results[0]
 
 
-def family_to_gene(family):
-    """Converts a PyHGNC Gene Family model to a PyBEL gene
+def gene_to_pybel(gene):
+    """Converts a PyHGNC Gene to a PyBEL gene
 
-    :param pyhgnc.manager.models.GeneFamily family: An HGNC Gene Family model
+    :param pyhgnc.manager.models.HGNC gene:  A PyHGNC Gene model
     :rtype: pybel.dsl.gene
     """
-    return gene(
-        namespace=GENE_FAMILY_KEYWORD,
+    return gene_dsl(
+        namespace='HGNC',
+        name=str(gene.symbol),
+        identifier=str(gene.identifier)
+    )
+
+
+def family_to_pybel(family):
+    """Converts a PyHGNC Gene Family model to a PyBEL gene
+
+    :param pyhgnc.manager.models.GeneFamily family: A PyHGNC Gene Family model
+    :rtype: pybel.dsl.gene
+    """
+    return gene_dsl(
+        namespace='GFAM',
         identifier=family.family_identifier,
         name=family.family_name
+    )
+
+
+def _write_gene_bel_namespace_helper(values, file):
+    """
+    :param dict[str,str] values:
+    :param file:
+    """
+    write_namespace(
+        namespace_name='HGNC Human Gene Names',
+        namespace_keyword='HGNC',
+        namespace_domain=NAMESPACE_DOMAIN_GENE,
+        author_name='Charles Tapley Hoyt',
+        citation_name='HGNC?',
+        values=values,
+        functions='G',
+        file=file
+    )
+
+
+def _write_gene_families_bel_namespace_helper(values, file):
+    """
+    :param list[str] values:
+    :param file:
+    """
+    write_namespace(
+        namespace_name='HGNC Gene Families',
+        namespace_keyword='GFAM',
+        namespace_domain=NAMESPACE_DOMAIN_GENE,
+        author_name='Charles Tapley Hoyt',
+        citation_name='HGNC?',
+        values=values,
+        functions='G',
+        file=file
     )
 
 
@@ -205,7 +257,7 @@ class Manager(DbManager, QueryManager):
                 continue
 
             for family in m.gene_families:
-                graph.add_unqualified_edge(n, family_to_gene(family), IS_A)
+                graph.add_unqualified_edge(n, family_to_pybel(family), IS_A)
 
     def get_family_by_id(self, family_identifier):
         """Gets a gene family by its identifier
@@ -230,7 +282,7 @@ class Manager(DbManager, QueryManager):
 
         :param pybel.BELGraph graph: The BEL graph to enrich
         """
-        for n, data in graph.nodes(data=True):
+        for gene_family_node, data in graph.nodes(data=True):
             if data[FUNCTION] != GENE:
                 continue
 
@@ -238,18 +290,18 @@ class Manager(DbManager, QueryManager):
                 continue
 
             if IDENTIFIER in data:
-                m = self.get_family_by_id(data[IDENTIFIER])
+                gene_family_model = self.get_family_by_id(data[IDENTIFIER])
             elif NAME in data:
-                m = self.get_family_by_name(data[NAME])
+                gene_family_model = self.get_family_by_name(data[NAME])
             else:
                 raise ValueError
 
-            if m is None:
+            if gene_family_model is None:
                 log.info('family not found: %s', data)
                 continue
 
-            for g in m.hgncs:
-                graph.add_unqualified_edge(gene(namespace='HGNC', name=g.symbol, identifier=g.identifier), n, IS_A)
+            for gene in gene_family_model.hgncs:
+                graph.add_is_a(gene_to_pybel(gene), gene_family_node)
 
     @staticmethod
     def ensure(connection=None):
@@ -346,3 +398,113 @@ class Manager(DbManager, QueryManager):
             _deal_with_nonsense(symbol)
             for symbol in self.session.query(HGNC.symbol).all()
         }
+
+    def _get_gene_encodings(self):
+        """Gets the name to encoding dictionary for HGNC gene names
+
+        :rtype: dict[str,str]
+        """
+        return {
+            symbol: encodings.get(locus_type, 'GRP')
+            for symbol, locus_type in self.session.query(HGNC.symbol, HGNC.locus_type).all()
+        }
+
+    def write_gene_bel_namespace(self, file):
+        values = self._get_gene_encodings()
+        _write_gene_bel_namespace_helper(values, file)
+
+    def deploy_gene_bel_namespace(self):
+        """Creates and deploys the Gene Names Namespace
+
+        :rtype: Optional[str]
+        """
+        file_name = get_today_arty_namespace('hgnc')
+
+        with open(file_name, 'w') as file:
+            self.write_gene_bel_namespace(file)
+
+        return deploy_namespace(file_name, module_name='hgnc')
+
+    def write_gene_family_bel_namespace(self, file):
+        values = [name for name, in self.session.query(GeneFamily.family_name).all()]
+        _write_gene_families_bel_namespace_helper(values=values, file=file)
+
+    def deploy_gene_family_bel_namespace(self):
+        """Creates and deploys the Gene Families Namespace
+
+        :rtype: Optional[str]
+        """
+        file_name = get_today_arty_namespace('gfam')
+
+        with open(file_name, 'w') as file:
+            self.write_gene_family_bel_namespace(file)
+
+        return deploy_namespace(file_name, 'gfam')
+
+    def export_gene_families_to_bel_graph(self):
+        """Export gene family definitions as a BEL graph
+
+        :rtype: pybel.BELGraph
+        """
+        graph = BELGraph(
+            name='HGNC Gene Family Definitions',
+            version='1.0.0',  # FIXME use database version
+            authors='HGNC Consortium',
+            description='Gene memberships to gene families',
+            contact='charles.hoyt@scai.fraunhofer.de',
+        )
+
+        graph.namespace_url.update({
+            'HGNC': get_latest_arty_namespace('hgnc'),
+            'GFAM': get_latest_arty_namespace('gfam')
+        })
+
+        for family in self.session.query(GeneFamily).all():
+            for gene in family.hgncs:
+                graph.add_is_a(
+                    gene_to_pybel(gene),
+                    family_to_pybel(family)
+                )
+
+        return graph
+
+    def write_gene_family_bel(self, file):
+        """Writes the Gene Family memberships as BEL
+
+        :param file:
+        """
+        graph = self.export_gene_families_to_bel_graph()
+        to_bel(graph=graph, file=file)
+
+    def deploy_gene_family_bel(self):
+        """Writes the Gene family memberships as BEL and deploys"""
+        name = 'hgnc-gene-family-membership'
+        file_name = get_today_arty_knowledge(name)
+
+        with open(file_name, 'w') as file:
+            self.write_gene_family_bel(file)
+
+        return deploy_knowledge(file_name, name)
+
+    def get_pathway_size_distribution(self):
+        """
+
+        :rtype: dict[str,int]
+        """
+        return Counter({
+            family.family_name: len(family.hgncs)
+            for family in self.session.query(GeneFamily)
+        })
+
+    def get_all_hgnc_symbols(self):
+        """Gets all Gene symbols in gene families
+
+        :rtype: set[str]
+        """
+        res = (
+            gene.symbol
+            for family in self.session.query(GeneFamily)
+            for gene in family.hgncs
+        )
+
+        return set(res)
