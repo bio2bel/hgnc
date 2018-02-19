@@ -21,47 +21,54 @@ def set_debug_param(debug):
         set_debug(10)
 
 
-@click.group(help='Convert HGNC to BEL. Default connection at {}'.format(DEFAULT_CACHE_CONNECTION))
-def main():
-    pass
+@click.group()
+@click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
+@click.pass_context
+def main(ctx, connection):
+    """Convert HGNC to BEL"""
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+    ctx.obj = Manager(connection=connection)
 
 
 @main.command()
-@click.option('-c', '--connection', help="Defaults to {}".format(DEFAULT_CACHE_CONNECTION))
 @click.option('-v', '--debug', count=True, help="Turn on debugging.")
-def populate(connection, debug):
+@click.pass_obj
+def populate(manager, debug):
     """Populate the database"""
     set_debug_param(debug)
-
-    manager = Manager(connection=connection)
-    log.info('connected to %s', manager.engine.url)
-
     manager.create_all()
     manager.populate()
 
 
 @main.command()
-@click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
 @click.option('-v', '--debug', count=True, help="Turn on debugging.")
-def drop(connection, debug):
+@click.pass_obj
+def drop(manager, debug):
     """Drops the database"""
     set_debug_param(debug)
-
-    m = Manager(connection=connection)
-    m.drop_all()
+    manager.drop_all()
 
 
 @main.command()
-@click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
+@click.pass_obj
+def summarize(manager):
+    """Summarize the contents of the database"""
+    click.echo('Genes: {}'.format(manager.count_genes()))
+    click.echo('Families: {}'.format(manager.count_families()))
+    click.echo('UniProt Entries: {}'.format(manager.count_uniprots()))
+
+
+@main.command()
 @click.option('-v', '--debug', count=True, help='Turn on debugging')
 @click.option('-p', '--port')
 @click.option('-h', '--host')
-def web(connection, debug, port, host):
+@click.pass_obj
+def web(manager, debug, port, host):
     """Run the web app"""
     set_debug_param(debug)
 
-    from .web import create_app
-    app = create_app(connection=connection, url='/')
+    from .web import get_app
+    app = get_app(connection=manager, url='/')
     app.run(host=host, port=port, debug=debug)
 
 

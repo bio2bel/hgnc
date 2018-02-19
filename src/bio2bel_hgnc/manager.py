@@ -2,17 +2,17 @@
 
 import logging
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import scoped_session, sessionmaker
+
 import pyhgnc.manager.models
 from bio2bel.utils import get_connection
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, IS_A, NAME, NAMESPACE
 from pybel.dsl import gene
 from pyhgnc.manager.database import DbManager
 from pyhgnc.manager.query import QueryManager
-from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session, sessionmaker
-
 from .constants import GENE_FAMILY_KEYWORD, MODULE_NAME
-from .models import HGNC, UniProt
+from .models import GeneFamily, HGNC, UniProt
 
 log = logging.getLogger(__name__)
 
@@ -22,6 +22,10 @@ __all__ = [
 
 
 def _deal_with_nonsense(results):
+    """
+    :param list[X] results:
+    :rtype: Optional[X]
+    """
     if not results:
         return
 
@@ -66,6 +70,15 @@ class Manager(DbManager, QueryManager):
 
     def db_import(self, silent=False, hgnc_file_path=None, hcop_file_path=None, low_memory=False):
         raise NotImplemented('call manager.populate instead')
+
+    def count_genes(self):
+        return self.session.query(HGNC).count()
+
+    def count_families(self):
+        return self.session.query(GeneFamily).count()
+
+    def count_uniprots(self):
+        return self.session.query(UniProt).count()
 
     def _drop_tables(self):
         raise NotImplemented('call manager.drop_all instead')
