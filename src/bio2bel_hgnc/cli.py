@@ -76,71 +76,63 @@ def web(manager, debug, port, host):
 
 
 @main.command()
-@click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
 @click.option('-v', '--debug', count=True, help='Turn on debugging')
 @click.option('-o', '--output', type=click.File('w'), default=sys.stdout)
-def write_gene_belns(connection, debug, output):
+@click.pass_obj
+def write_gene_belns(manager, debug, output):
     """Write gene namespace"""
     set_debug_param(debug)
 
-    manager = Manager(connection=connection)
     manager.write_gene_bel_namespace(output)
 
 
 @main.command()
-@click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
 @click.option('-v', '--debug', count=True, help='Turn on debugging')
-def deploy_gene_belns(connection, debug):
+@click.pass_obj
+def deploy_gene_belns(manager, debug):
     """Deploy gene namespace"""
     set_debug_param(debug)
-
-    manager = Manager(connection=connection)
     manager.deploy_gene_bel_namespace()
 
 
 @main.command()
-@click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
 @click.option('-v', '--debug', count=True, help='Turn on debugging')
 @click.option('-o', '--output', type=click.File('w'), default=sys.stdout)
-def write_gene_family_belns(connection, debug, output):
+@click.pass_obj
+def write_gene_family_belns(manager, debug, output):
     """Write gene family namespace"""
     set_debug_param(debug)
 
-    manager = Manager(connection=connection)
     manager.write_gene_family_bel_namespace(output)
 
 
 @main.command()
-@click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
 @click.option('-v', '--debug', count=True, help='Turn on debugging')
-def deploy_gene_family_belns(connection, debug):
+@click.pass_obj
+def deploy_gene_family_belns(manager, debug):
     """Deploy gene family namespace"""
     set_debug_param(debug)
 
-    manager = Manager(connection=connection)
     manager.deploy_gene_family_bel_namespace()
 
 
 @main.command()
-@click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
 @click.option('-v', '--debug', count=True, help='Turn on debugging')
 @click.option('-o', '--output', type=click.File('w'), default=sys.stdout)
-def write_gene_family_bel(connection, debug, output):
+@click.pass_obj
+def write_gene_family_bel(manager, debug, output):
     """Write gene family BEL script"""
     set_debug_param(debug)
 
-    manager = Manager(connection=connection)
     manager.write_gene_family_bel(output)
 
 
 @main.command()
-@click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
 @click.option('-v', '--debug', count=True, help='Turn on debugging')
-def deploy_gene_family_bel(connection, debug):
+@click.pass_obj
+def deploy_gene_family_bel(manager, debug):
     """Deploy gene family BEL script"""
     set_debug_param(debug)
-
-    manager = Manager(connection=connection)
 
     gene_namespace_url = manager.deploy_gene_bel_namespace()
     if gene_namespace_url:
@@ -156,19 +148,17 @@ def deploy_gene_family_bel(connection, debug):
 
 
 @main.command()
-@click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
 @click.option('-v', '--debug', count=True, help='Turn on debugging')
-def upload_gene_family_bel(connection, debug):
+@click.pass_obj
+def upload_gene_family_bel(manager, debug):
     """Uploads to PyBEL network store"""
     set_debug_param(debug)
 
     from pybel.manager import Manager as PyBELManager
-
-    hgnc_manager = Manager(connection=connection)
-    pybel_manager = PyBELManager(connection=connection)
+    pybel_manager = PyBELManager(connection=manager.connection)
 
     log.info('exporting graph')
-    graph = hgnc_manager.export_gene_families_to_bel_graph()
+    graph = manager.export_gene_families_to_bel_graph()
     log.info('inserting graph')
     pybel_manager.insert_graph(graph)
 
