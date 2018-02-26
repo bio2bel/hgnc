@@ -516,7 +516,7 @@ class Manager(DbManager, QueryManager):
             for family in self.session.query(GeneFamily)
         })
 
-    def get_all_hgnc_symbols(self):
+    def get_all_hgnc_symbols_family(self):
         """Gets all Gene symbols in gene families
 
         :rtype: set[str]
