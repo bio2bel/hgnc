@@ -1,5 +1,5 @@
 sqlalchemy==1.1.15
-pybel>=0.10.1
+pybel[deployment]>=0.10.1
 click
 six
 pandas
