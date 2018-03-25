@@ -297,6 +297,31 @@ class Manager(DbManager, QueryManager):
         results = self.gene_family(family_name=family_name)
         return _deal_with_nonsense(results)
 
+    def enrich_hgnc_with_entrez_equivalences(self, graph):
+        """For all HGNC genes, adds their Entrez equivalent nodes
+
+        :param pybel.BELGraph graph: The BEL graph to enrich
+        """
+        hgnc_symbol_to_entrez = self.build_hgnc_symbol_entrez_id_mapping()
+
+        for gene_node, data in graph.nodes(data=True):
+            if data[FUNCTION] != GENE:
+                continue
+
+            namespace = data.get(NAMESPACE)
+
+            if namespace != 'HGNC':
+                continue
+
+            name = data[NAME]
+            entrez = hgnc_symbol_to_entrez[name]
+            graph.add_equivalence(gene_node, gene_dsl(
+                namespace='ENTREZ',
+                name='EG:{}'.format(entrez),
+                identifier=str(entrez)
+            ))
+
+
     def enrich_families_with_genes(self, graph):
         """Enrich gene families in the BEL graph with their member genes
 
@@ -347,6 +372,16 @@ class Manager(DbManager, QueryManager):
         return {
             identifier: symbol
             for identifier, symbol in self.session.query(HGNC.entrez, HGNC.symbol).all()
+        }
+
+    def build_hgnc_symbol_entrez_id_mapping(self):
+        """Builds a mapping from HGNC symbol to ENTREZ identifier
+
+        :rtype: dict[str,str]
+        """
+        return {
+            symbol: identifier
+            for symbol, identifier in self.session.query(HGNC.symbol, HGNC.entrez).all()
         }
 
     def build_hgnc_id_symbol_mapping(self):
