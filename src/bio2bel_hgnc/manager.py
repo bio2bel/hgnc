@@ -65,8 +65,8 @@ def family_to_pybel(family):
     """
     return gene_dsl(
         namespace='GFAM',
-        identifier=family.family_identifier,
-        name=family.family_name
+        identifier=str(family.family_identifier),
+        name=str(family.family_name)
     )
 
 
