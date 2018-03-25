@@ -4,8 +4,8 @@ import logging
 from collections import Counter
 
 from pybel import BELGraph, to_bel
-from pybel.constants import FUNCTION, GENE, IDENTIFIER, IS_A, NAME, NAMESPACE, NAMESPACE_DOMAIN_GENE
-from pybel.dsl import gene as gene_dsl
+from pybel.constants import FUNCTION, GENE, IDENTIFIER, IS_A, NAME, NAMESPACE, NAMESPACE_DOMAIN_GENE, PROTEIN, RNA
+from pybel.dsl import gene as gene_dsl, protein as protein_dsl, rna as rna_dsl
 from pybel.resources import get_latest_arty_namespace, write_namespace
 from pybel.resources.arty import get_today_arty_knowledge, get_today_arty_namespace
 from pybel.resources.deploy import deploy_knowledge, deploy_namespace
@@ -22,6 +22,12 @@ log = logging.getLogger(__name__)
 __all__ = [
     'Manager',
 ]
+
+_func_to_dsl = {
+    GENE: gene_dsl,
+    RNA: rna_dsl,
+    PROTEIN: protein_dsl
+}
 
 
 def _deal_with_nonsense(results):
@@ -303,19 +309,18 @@ class Manager(AbstractManager, _PyHGNCManager):
         hgnc_symbol_to_entrez = self.build_hgnc_symbol_entrez_id_mapping()
 
         for gene_node, data in graph.nodes(data=True):
-            if data[FUNCTION] != GENE:
-                continue
-
             namespace = data.get(NAMESPACE)
 
             if namespace != 'HGNC':
                 continue
 
+            func = data[FUNCTION]
             name = data[NAME]
             entrez = hgnc_symbol_to_entrez[name]
-            graph.add_equivalence(gene_node, gene_dsl(
+
+            graph.add_equivalence(gene_node, _func_to_dsl[func](
                 namespace='ENTREZ',
-                name='EG:{}'.format(entrez),
+                name=name,
                 identifier=str(entrez)
             ))
 
