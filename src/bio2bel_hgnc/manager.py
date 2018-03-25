@@ -3,18 +3,16 @@
 import logging
 from collections import Counter
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session, sessionmaker
-
-import pyhgnc.manager.models
-from bio2bel.utils import get_connection
 from pybel import BELGraph, to_bel
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, IS_A, NAME, NAMESPACE, NAMESPACE_DOMAIN_GENE
 from pybel.dsl import gene as gene_dsl
 from pybel.resources import get_latest_arty_namespace, write_namespace
 from pybel.resources.arty import get_today_arty_knowledge, get_today_arty_namespace
 from pybel.resources.deploy import deploy_knowledge, deploy_namespace
+
+from bio2bel.abstractmanager import AbstractManager
 from pyhgnc.manager.database import DbManager
+from pyhgnc.manager.models import Base
 from pyhgnc.manager.query import QueryManager
 from .constants import GENE_FAMILY_KEYWORD, MODULE_NAME, encodings
 from .models import GeneFamily, HGNC, UniProt
@@ -100,28 +98,31 @@ def _write_gene_families_bel_namespace_helper(values, file):
     )
 
 
-class Manager(DbManager, QueryManager):
+class _PyHGNCManager(DbManager, QueryManager):
+    pass
+
+
+class Manager(AbstractManager, _PyHGNCManager):
     """An extended version of the PyHGNC manager to have useful functions"""
 
-    def __init__(self, connection=None):
-        """
-        :param Optional[str] connection: The connection string
-        """
-        self.connection = get_connection(MODULE_NAME, connection=connection)
-        self.engine = create_engine(self.connection)
-        self.session_maker = sessionmaker(bind=self.engine, autoflush=False, expire_on_commit=False)
-        self.session = scoped_session(self.session_maker)
+    module_name = MODULE_NAME
 
-    def create_all(self, checkfirst=True):
-        self._create_tables(checkfirst=checkfirst)
+    @property
+    def base(self):
+        return Base
 
     def populate(self, silent=False, hgnc_file_path=None, hcop_file_path=None, low_memory=False):
         json_data = self.load_hgnc_json(hgnc_file_path=hgnc_file_path)
         self.insert_hgnc(hgnc_dict=json_data, silent=silent, low_memory=low_memory)
         self.insert_hcop(silent=silent, hcop_file_path=hcop_file_path)
 
+    #: Clobber this PyHGNC function so it doesn't accidentally get called
     def db_import(self, silent=False, hgnc_file_path=None, hcop_file_path=None, low_memory=False):
         raise NotImplemented('call manager.populate instead')
+
+    #: Clobber this PyHGNC function so it doesn't accidentally get called
+    def _drop_tables(self):
+        raise NotImplemented('call manager.drop_all instead')
 
     def count_genes(self):
         return self.session.query(HGNC).count()
@@ -137,14 +138,11 @@ class Manager(DbManager, QueryManager):
 
         :rtype: dict[str,int]
         """
-        return dict(genes=self.count_genes(), families=self.count_families(), uniprots=self.count_uniprots())
-
-    def _drop_tables(self):
-        raise NotImplemented('call manager.drop_all instead')
-
-    def drop_all(self):
-        log.info('drop tables in {}'.format(self.engine.url))
-        pyhgnc.manager.models.Base.metadata.drop_all(self.engine, checkfirst=True)
+        return dict(
+            genes=self.count_genes(),
+            families=self.count_families(),
+            uniprots=self.count_uniprots()
+        )
 
     def get_gene_by_hgnc_symbol(self, hgnc_symbol):
         """Gets a gene by the symbol
@@ -321,7 +319,6 @@ class Manager(DbManager, QueryManager):
                 identifier=str(entrez)
             ))
 
-
     def enrich_families_with_genes(self, graph):
         """Enrich gene families in the BEL graph with their member genes
 
@@ -347,20 +344,6 @@ class Manager(DbManager, QueryManager):
 
             for gene in gene_family_model.hgncs:
                 graph.add_is_a(gene_to_pybel(gene), gene_family_node)
-
-    @staticmethod
-    def ensure(connection=None):
-        """
-        :param connection: A connection string, a manager, or none to use the default manager
-        :type connection: Optional[str or Manager]
-        :rtype: Manager
-        """
-        if connection is None or isinstance(connection, str):
-            return Manager(connection=connection)
-        return connection
-
-    def __repr__(self):
-        return '<{} connection={}>'.format(self.__class__.__name__, self.engine.url)
 
     """ Mapping dictionaries"""
 
