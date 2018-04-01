@@ -11,11 +11,9 @@ from pybel.resources.arty import get_today_arty_knowledge, get_today_arty_namesp
 from pybel.resources.deploy import deploy_knowledge, deploy_namespace
 
 from bio2bel.abstractmanager import AbstractManager
-from pyhgnc.manager.database import DbManager
-from pyhgnc.manager.models import Base
-from pyhgnc.manager.query import QueryManager
 from .constants import GENE_FAMILY_KEYWORD, MODULE_NAME, encodings
-from .models import GeneFamily, HGNC, UniProt
+from .models import Base, GeneFamily, HumanGene, MouseGene, RatGene, UniProt
+from .wrapper import BaseManager
 
 log = logging.getLogger(__name__)
 
@@ -45,9 +43,9 @@ def _deal_with_nonsense(results):
 
 
 def gene_to_pybel(gene):
-    """Converts a PyHGNC Gene to a PyBEL gene
+    """Converts a Gene to a PyBEL gene
 
-    :param pyhgnc.manager.models.HGNC gene:  A PyHGNC Gene model
+    :param bio2bel_hgnc.models.HumanGene gene:  A Gene model
     :rtype: pybel.dsl.gene
     """
     return gene_dsl(
@@ -57,16 +55,54 @@ def gene_to_pybel(gene):
     )
 
 
-def family_to_pybel(family):
-    """Converts a PyHGNC Gene Family model to a PyBEL gene
+def gene_to_rna_to_pybel(gene):
+    """Converts a Gene to a PyBEL gene
 
-    :param pyhgnc.manager.models.GeneFamily family: A PyHGNC Gene Family model
+    :param bio2bel_hgnc.models.HumanGene gene:  A Gene model
+    :rtype: pybel.dsl.gene
+    """
+    return rna_dsl(
+        namespace='HGNC',
+        name=str(gene.symbol),
+        identifier=str(gene.identifier)
+    )
+
+
+def gene_to_protein_to_pybel(gene):
+    """Converts a Gene to a PyBEL gene
+
+    :param bio2bel_hgnc.models.HumanGene gene:  A Gene model
+    :rtype: pybel.dsl.gene
+    """
+    return protein_dsl(
+        namespace='HGNC',
+        name=str(gene.symbol),
+        identifier=str(gene.identifier)
+    )
+
+
+def family_to_pybel(family):
+    """Converts a Gene Family model to a PyBEL gene
+
+    :param bio2bel_hgnc.models.GeneFamily family: A Gene Family model
     :rtype: pybel.dsl.gene
     """
     return gene_dsl(
         namespace='GFAM',
         identifier=str(family.family_identifier),
         name=str(family.family_name)
+    )
+
+
+def uniprot_to_pybel(uniprot):
+    """
+
+    :param bio2bel_hgnc.models.UniProt uniprot:
+    :return:
+    """
+    return protein_dsl(
+        namespace='UNIPROT',
+        identifier=str(uniprot.uniprotid)
     )
 
 
@@ -104,14 +140,16 @@ def _write_gene_families_bel_namespace_helper(values, file):
     )
 
 
-class _PyHGNCManager(DbManager, QueryManager):
-    pass
-
-
-class Manager(AbstractManager, _PyHGNCManager):
-    """An extended version of the PyHGNC manager to have useful functions"""
+class Manager(AbstractManager, BaseManager):
+    """Bio2BEL HGNC Manager"""
 
     module_name = MODULE_NAME
+    flask_admin_models = [HumanGene, GeneFamily, UniProt, MouseGene, RatGene, ]
+
+    def __init__(self, connection=None):
+        super().__init__(connection=connection)
+
+        self._hgnc_symbol_entrez_id_mapping = {}
 
     @property
     def base(self):
@@ -130,14 +168,20 @@ class Manager(AbstractManager, _PyHGNCManager):
     def _drop_tables(self):
         raise NotImplemented('call manager.drop_all instead')
 
-    def count_genes(self):
-        return self.session.query(HGNC).count()
+    def count_human_genes(self):
+        return self._count_model(HumanGene)
 
     def count_families(self):
-        return self.session.query(GeneFamily).count()
+        return self._count_model(GeneFamily)
+
+    def count_mouse_genes(self):
+        return self._count_model(MouseGene)
+
+    def count_rat_genes(self):
+        return self._count_model(RatGene)
 
     def count_uniprots(self):
-        return self.session.query(UniProt).count()
+        return self._count_model(UniProt)
 
     def summarize(self):
         """Returns a summary dictionary over the content of the database
@@ -145,7 +189,9 @@ class Manager(AbstractManager, _PyHGNCManager):
         :rtype: dict[str,int]
         """
         return dict(
-            genes=self.count_genes(),
+            human_genes=self.count_human_genes(),
+            rat_genes=self.count_rat_genes(),
+            mouse_genes=self.count_mouse_genes(),
             families=self.count_families(),
             uniprots=self.count_uniprots()
         )
@@ -154,7 +200,7 @@ class Manager(AbstractManager, _PyHGNCManager):
         """Gets a gene by the symbol
 
         :param str hgnc_symbol: The HGNC gene symbol
-        :rtype: Optional[pyhgnc.manager.models.HGNC]
+        :rtype: Optional[bio2bel_hgnc.models.HumanGene]
         """
         results = self.hgnc(symbol=hgnc_symbol)
         return _deal_with_nonsense(results)
@@ -163,7 +209,7 @@ class Manager(AbstractManager, _PyHGNCManager):
         """Gets a gene by the identifier
 
         :param str hgnc_id: The HGNC gene identifier
-        :rtype: Optional[pyhgnc.manager.models.HGNC]
+        :rtype: Optional[bio2bel_hgnc.models.HumanGene]
         """
         results = self.hgnc(identifier=hgnc_id)
         return _deal_with_nonsense(results)
@@ -172,7 +218,7 @@ class Manager(AbstractManager, _PyHGNCManager):
         """Gets a HGNC gene by its Entrez gene identifier
 
         :param str entrez_id: The Entrez gene identifier
-        :rtype: Optional[pyhgnc.manager.models.HGNC]
+        :rtype: Optional[bio2bel_hgnc.models.HumanGene]
         """
         results = self.hgnc(entrez=entrez_id)
         return _deal_with_nonsense(results)
@@ -181,7 +227,7 @@ class Manager(AbstractManager, _PyHGNCManager):
         """Gets a HGNC gene by an orthologous MGI identifier
 
         :param str mgi_id: MGI identifier
-        :rtype: Optional[pyhgnc.manager.models.HGNC]
+        :rtype: Optional[bio2bel_hgnc.models.HumanGene]
         """
         raise NotImplementedError
 
@@ -189,9 +235,9 @@ class Manager(AbstractManager, _PyHGNCManager):
         """Gets a HGNC gene by an orthologous MGI gene symbol
 
         :param str mgi_symbol: MGI gene symbol
-        :rtype: Optional[pyhgnc.manager.models.HGNC]
+        :rtype: Optional[bio2bel_hgnc.models.HumanGene]
         """
-        # TODO how to deal with getting the MGI name to MGI identifiers mapping? Should this be part of PyHGNC, or something different?
+        # TODO how to deal with getting the MGI name to MGI identifiers mapping? Should this be part of Bio2BEL , or something different?
 
         raise NotImplementedError
 
@@ -199,7 +245,7 @@ class Manager(AbstractManager, _PyHGNCManager):
         """Gets a HGNC gene by an orthologous RGD identifier
 
         :param str rgd_id: RGD identifier
-        :rtype: Optional[pyhgnc.manager.models.HGNC]
+        :rtype: Optional[bio2bel_hgnc.models.HumanGene]
         """
         raise NotImplementedError
 
@@ -207,19 +253,18 @@ class Manager(AbstractManager, _PyHGNCManager):
         """Gets a HGNC gene by an orthologous RGD identifier
 
         :param str rgd_symbol: RGD gene symbol
-        :rtype: Optional[pyhgnc.manager.models.HGNC]
+        :rtype: Optional[bio2bel_hgnc.models.HumanGene]
         """
-        # TODO how to deal with getting the RGD name to RGD identifiers mapping? Should this be part of PyHGNC, or something different?
+        # TODO how to deal with getting the RGD name to RGD identifiers mapping? Should this be part of Bio2BEL, or something different?
 
         raise NotImplementedError
 
     def get_node(self, graph, node):
-        """Gets a node from the PyHGNC database, whether it has a HGNC, RGD, MGI, or EG identifier.
+        """Gets a node from the database, whether it has a HGNC, RGD, MGI, or EG identifier.
 
         :param pybel.BELGraph graph: A BEL graph
         :param tuple node: A PyBEL node tuple
-        :param Optional[pyhgnc.manager.query.QueryManager] manager: A PyHGNC database manager
-        :rtype: pyhgnc.manager.models.HGNC
+        :rtype: bio2bel.models.HGNC
         :raises: KeyError
         """
         data = graph.node[node]
@@ -228,33 +273,35 @@ class Manager(AbstractManager, _PyHGNCManager):
             raise KeyError
 
         namespace = data[NAMESPACE]
+        identifer = data.get(IDENTIFIER)
+        name = data.get(NAME)
 
         if namespace == 'HGNC':
-            if IDENTIFIER in data:
-                return self.get_gene_by_hgnc_id(data[IDENTIFIER])
-            elif NAME in data:
-                return self.get_gene_by_hgnc_symbol(data[NAME])
+            if identifer is not None:
+                return self.get_gene_by_hgnc_id(identifer)
+            elif name is not None:
+                return self.get_gene_by_hgnc_symbol(name)
             raise KeyError
 
         if namespace in {'ENTREZ', 'EGID', 'EG'}:
-            if IDENTIFIER in data:
-                return self.get_gene_by_entrez_id(data[IDENTIFIER])
-            elif NAME in data:
-                return self.get_gene_by_entrez_id(data[NAME])
+            if identifer is not None:
+                return self.get_gene_by_entrez_id(identifer)
+            elif name is not None:
+                return self.get_gene_by_entrez_id(name)
             raise KeyError
 
         if namespace in {'MGI'}:
-            if IDENTIFIER in data:
-                return self.get_gene_by_mgi_id(data[IDENTIFIER])
-            elif NAME in data:
-                return self.get_gene_by_mgi_symbol(data[NAME])
+            if identifer is not None:
+                return self.get_gene_by_mgi_id(identifer)
+            elif name is not None:
+                return self.get_gene_by_mgi_symbol(name)
             raise KeyError
 
         if namespace in {'RGD'}:
-            if IDENTIFIER in data:
-                return self.get_gene_by_rgd_id(data[IDENTIFIER])
-            elif NAME in data:
-                return self.get_gene_by_rgd_symbol(data[NAME])
+            if identifer is not None:
+                return self.get_gene_by_rgd_id(identifer)
+            elif name is not None:
+                return self.get_gene_by_rgd_symbol(name)
             raise KeyError
 
     def enrich_genes_with_families(self, graph):
@@ -287,7 +334,7 @@ class Manager(AbstractManager, _PyHGNCManager):
         """Gets a gene family by its identifier
 
         :param str family_identifier: The identifier of a HGNC Gene Family
-        :rtype: Optional[pyhgnc.manager.models.GeneFamily]
+        :rtype: Optional[bio2bel_hgnc.models.GeneFamily]
         """
         results = self.gene_family(family_identifier=family_identifier)
         return _deal_with_nonsense(results)
@@ -296,33 +343,36 @@ class Manager(AbstractManager, _PyHGNCManager):
         """Gets a gene family by its name
 
         :param str family_name: The name of a HGNC Gene Family
-        :rtype: Optional[pyhgnc.manager.models.GeneFamily]
+        :rtype: Optional[bio2bel_hgnc.models.GeneFamily]
         """
         results = self.gene_family(family_name=family_name)
         return _deal_with_nonsense(results)
+
+    def _enrich_hgnc_with_entrez_equivalences(self, graph, node):
+        data = graph.node[node]
+
+        namespace = data.get(NAMESPACE)
+
+        if namespace != 'HGNC':
+            return
+
+        func = data[FUNCTION]
+        name = data[NAME]
+        entrez = self.hgnc_symbol_entrez_id_mapping[name]
+
+        graph.add_equivalence(node, _func_to_dsl[func](
+            namespace='ENTREZ',
+            name=name,
+            identifier=str(entrez)
+        ))
 
     def enrich_hgnc_with_entrez_equivalences(self, graph):
         """For all HGNC genes, adds their Entrez equivalent nodes
 
         :param pybel.BELGraph graph: The BEL graph to enrich
         """
-        hgnc_symbol_to_entrez = self.build_hgnc_symbol_entrez_id_mapping()
-
-        for gene_node, data in graph.nodes(data=True):
-            namespace = data.get(NAMESPACE)
-
-            if namespace != 'HGNC':
-                continue
-
-            func = data[FUNCTION]
-            name = data[NAME]
-            entrez = hgnc_symbol_to_entrez[name]
-
-            graph.add_equivalence(gene_node, _func_to_dsl[func](
-                namespace='ENTREZ',
-                name=name,
-                identifier=str(entrez)
-            ))
+        for node in graph:
+            self._enrich_hgnc_with_entrez_equivalences(graph, node)
 
     def enrich_families_with_genes(self, graph):
         """Enrich gene families in the BEL graph with their member genes
@@ -359,8 +409,15 @@ class Manager(AbstractManager, _PyHGNCManager):
         """
         return {
             identifier: symbol
-            for identifier, symbol in self.session.query(HGNC.entrez, HGNC.symbol).all()
+            for identifier, symbol in self.session.query(HumanGene.entrez, HumanGene.symbol).all()
         }
+
+    @property
+    def hgnc_symbol_entrez_id_mapping(self):
+        if not self._hgnc_symbol_entrez_id_mapping:
+            self._hgnc_symbol_entrez_id_mapping = self.build_hgnc_symbol_entrez_id_mapping()
+
+        return self._hgnc_symbol_entrez_id_mapping
 
     def build_hgnc_symbol_entrez_id_mapping(self):
         """Builds a mapping from HGNC symbol to ENTREZ identifier
@@ -369,7 +426,7 @@ class Manager(AbstractManager, _PyHGNCManager):
         """
         return {
             symbol: identifier
-            for symbol, identifier in self.session.query(HGNC.symbol, HGNC.entrez).all()
+            for symbol, identifier in self.session.query(HumanGene.symbol, HumanGene.entrez).all()
         }
 
     def build_hgnc_id_symbol_mapping(self):
@@ -379,7 +436,7 @@ class Manager(AbstractManager, _PyHGNCManager):
         """
         return {
             str(identifier): symbol
-            for identifier, symbol in self.session.query(HGNC.identifier, HGNC.symbol).all()
+            for identifier, symbol in self.session.query(HumanGene.identifier, HumanGene.symbol).all()
         }
 
     def build_hgnc_symbol_id_mapping(self):
@@ -389,7 +446,7 @@ class Manager(AbstractManager, _PyHGNCManager):
         """
         return {
             symbol: str(identifier)
-            for symbol, identifier in self.session.query(HGNC.symbol, HGNC.identifier).all()
+            for symbol, identifier in self.session.query(HumanGene.symbol, HumanGene.identifier).all()
         }
 
     def build_hgnc_symbol_uniprot_ids_mapping(self):
@@ -399,7 +456,7 @@ class Manager(AbstractManager, _PyHGNCManager):
         """
         return {
             symbol: uniprot_id
-            for symbol, uniprot_id in self.session.query(HGNC.symbol, UniProt.uniprotid).all()
+            for symbol, uniprot_id in self.session.query(HumanGene.symbol, UniProt.uniprotid).all()
         }
 
     def build_hgnc_id_uniprot_ids_mapping(self):
@@ -409,7 +466,7 @@ class Manager(AbstractManager, _PyHGNCManager):
         """
         return {
             hgnc_id: uniprot_id
-            for hgnc_id, uniprot_id in self.session.query(HGNC.identifier, UniProt.uniprotid).all()
+            for hgnc_id, uniprot_id in self.session.query(HumanGene.identifier, UniProt.uniprotid).all()
         }
 
     def build_uniprot_id_hgnc_id_mapping(self):
@@ -419,7 +476,7 @@ class Manager(AbstractManager, _PyHGNCManager):
         """
         return {
             uniprot_id: hgnc_id
-            for hgnc_id, uniprot_id in self.session.query(HGNC.identifier, UniProt.uniprotid).all()
+            for hgnc_id, uniprot_id in self.session.query(HumanGene.identifier, UniProt.uniprotid).all()
         }
 
     def build_uniprot_id_hgnc_symbol_mapping(self):
@@ -429,17 +486,17 @@ class Manager(AbstractManager, _PyHGNCManager):
         """
         return {
             uniprot_id: symbol
-            for symbol, uniprot_id in self.session.query(HGNC.symbol, UniProt.uniprotid).all()
+            for symbol, uniprot_id in self.session.query(HumanGene.symbol, UniProt.uniprotid).all()
         }
 
     def get_all_hgnc_symbols(self):
-        """Returns the set of hgnc symbols in PyHGNC
+        """Returns the set of hgnc symbols in the database
 
         :rtype: set
         """
         return {
             _deal_with_nonsense(symbol)
-            for symbol in self.session.query(HGNC.symbol).all()
+            for symbol in self.session.query(HumanGene.symbol).all()
         }
 
     def _get_gene_encodings(self):
@@ -449,7 +506,7 @@ class Manager(AbstractManager, _PyHGNCManager):
         """
         return {
             symbol: encodings.get(locus_type, 'GRP')
-            for symbol, locus_type in self.session.query(HGNC.symbol, HGNC.locus_type).all()
+            for symbol, locus_type in self.session.query(HumanGene.symbol, HumanGene.locus_type).all()
         }
 
     def write_gene_bel_namespace(self, file):
@@ -551,3 +608,51 @@ class Manager(AbstractManager, _PyHGNCManager):
         )
 
         return set(res)
+
+    def add_central_dogma(self, graph, node):
+        raise NotImplementedError
+
+    def add_node_equivalencies(self, graph, node, add_leaves=True):
+        """Given an HGNC node, add equivalencies found in the database.
+
+         - Entrez
+         - UniProt
+         - miRBase
+
+        :param pybel.BELGraph graph: A BEL graph
+        :param tuple node: A PyBEL node tuple
+        :param bool add_leaves: Should equivalencies that are not already in the graph be added?
+        """
+        gene = self.get_node(graph, node)
+        if gene is None:
+            return
+
+        for uniprot in gene.uniprots:
+            graph.add_translation(
+                gene_to_pybel(gene),
+                gene_to_rna_to_pybel(gene)
+            )
+            graph.add_translation(
+                gene_to_rna_to_pybel(gene),
+                gene_to_protein_to_pybel(gene),
+            )
+            graph.add_equivalence(
+                gene_to_protein_to_pybel(gene),
+                uniprot_to_pybel(uniprot)
+            )
+
+        if gene.entrez:
+            graph.add_equivalence(
+                node,
+                gene_dsl(namespace='ENTREZ', identifier=str(gene.entrez))
+            )
+
+        if gene.mirbase:
+            graph.add_translation(
+                gene_to_pybel(gene),
+                gene_to_rna_to_pybel(gene)
+            )
+            graph.add_equivalence(
+                gene_to_rna_to_pybel(gene),
+                rna_dsl(namespace='MIRBASE', identifier=str(gene.entrez))
+            )

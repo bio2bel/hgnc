@@ -1,11 +1,17 @@
 # -*- coding: utf-8 -*-
 
-from pyhgnc.manager.models import AliasName, AliasSymbol, GeneFamily, HGNC, UniProt
+from pyhgnc.manager.models import (
+    AliasName, AliasSymbol, Base, GeneFamily, HGNC as HumanGene, MGD as MouseGene,
+    RGD as RatGene, UniProt,
+)
 
 __all__ = [
-    'HGNC',
     'AliasSymbol',
     'AliasName',
+    'Base',
     'GeneFamily',
+    'HumanGene',
+    'MouseGene',
+    'RatGene',
     'UniProt',
 ]

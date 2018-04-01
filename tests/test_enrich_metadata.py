@@ -131,7 +131,7 @@ class TestEnrich(TemporaryCacheMixin):
         graph = BELGraph()
 
         # CD33's MGI counterpart's identifier
-        cd33_tuple = graph.add_node_from_data(protein(identifier='945', namespace='EG'))
+        cd33_tuple = graph.add_node_from_data(protein(identifier='945', namespace='ENTREZ'))
 
         cd33_model = get_node(graph, cd33_tuple, connection=self.manager)
         self.help_check_cd33_model(cd33_model)
@@ -156,12 +156,12 @@ class TestEnrich(TemporaryCacheMixin):
     def test_add_equivalency(self):
         graph = BELGraph()
         cd33_hgnc_tuple = graph.add_node_from_data(protein(name='CD33', namespace='HGNC'))
-        cd33_eg_tuple = graph.add_node_from_data(protein(identifier='945', namespace='EG'))
+        cd33_eg_tuple = graph.add_node_from_data(protein(identifier='945', namespace='ENTREZ'))
 
         self.assertEqual(2, graph.number_of_nodes())
         self.assertEqual(0, graph.number_of_edges())
 
-        add_node_equivalencies(graph, cd33_hgnc_tuple, manager=self.manager, add_leaves=False)
+        add_node_equivalencies(graph, cd33_hgnc_tuple, connection=self.manager, add_leaves=False)
 
         self.assertEqual(2, graph.number_of_nodes())
         self.assertEqual(2, graph.number_of_edges())
@@ -182,13 +182,13 @@ class TestEnrich(TemporaryCacheMixin):
 
         self.assertEqual(1, graph.number_of_nodes())
 
-        add_node_equivalencies(graph, cd33_hgnc_tuple, manager=self.manager, add_leaves=False)
+        add_node_equivalencies(graph, cd33_hgnc_tuple, connection=self.manager, add_leaves=True)
 
-        cd33_ed = protein(identifier='945', namespace='EG')
+        cd33_entrez = protein(identifier='945', namespace='ENTREZ')
 
-        self.assertTrue(graph.has_node_with_data(cd33_ed))
+        self.assertTrue(graph.has_node_with_data(cd33_entrez))
 
-        cd33_eg_node = node_to_tuple(cd33_ed)
+        cd33_eg_node = node_to_tuple(cd33_entrez)
 
         self.assertIn(cd33_eg_node, graph.edge[cd33_hgnc_tuple])
         self.assertIn(equivalence_code, graph.edge[cd33_hgnc_tuple][cd33_eg_node])
