@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
 
 import logging
+import time
 from collections import Counter
 
 from pybel import BELGraph, to_bel
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, IS_A, NAME, NAMESPACE, NAMESPACE_DOMAIN_GENE, PROTEIN, RNA
 from pybel.dsl import gene as gene_dsl, protein as protein_dsl, rna as rna_dsl
+from pybel.manager.models import Namespace, NamespaceEntry
 from pybel.resources import get_latest_arty_namespace, write_namespace
 from pybel.resources.arty import get_today_arty_knowledge, get_today_arty_namespace
 from pybel.resources.deploy import deploy_knowledge, deploy_namespace
+from tqdm import tqdm
 
 from bio2bel.abstractmanager import AbstractManager
 from .constants import GENE_FAMILY_KEYWORD, MODULE_NAME, encodings
@@ -659,3 +662,78 @@ class Manager(AbstractManager, BaseManager):
                 gene_to_rna_to_pybel(gene),
                 rna_dsl(namespace='MIRBASE', identifier=str(gene.entrez))
             )
+
+    def _iterate_namespace_models(self):
+        return tqdm(self.session.query(HumanGene), total=self.count_human_genes())
+
+    def _create_namespace_entry_from_model(self, model, namespace=None):
+        return NamespaceEntry(
+            encoding=encodings.get(model.locus_type, 'GRP'),
+            identifier=model.identifier,
+            name=model.symbol,
+            namespace=namespace
+        )
+
+    def _get_namespace_entries(self):
+        return [
+            self._create_namespace_entry_from_model(human_gene)
+            for human_gene in self._iterate_namespace_models()
+        ]
+
+    def _make_namespace(self):
+        """
+        :rtype: pybel.manager.models.Namespace
+        """
+        entries = self._get_namespace_entries()
+        _namespace_keyword = self._get_namespace_keyword()
+        ns = Namespace(
+            name=_namespace_keyword,
+            keyword=_namespace_keyword,
+            url=_namespace_keyword,
+            version=str(time.asctime()),
+            entries=entries,
+        )
+        self.session.add(ns)
+
+        t = time.time()
+        log.info('committing models')
+        self.session.commit()
+        log.info('committed models in %.2f seconds', time.time() - t)
+
+        return ns
+
+    def _update_namespace(self, namespace):
+        """
+        :param pybel.manager.models.Namespace namespace:
+        """
+        old = {term.identifier for term in namespace.entries}
+        new_count = 0
+
+        for human_gene in self._iterate_namespace_models():
+            if human_gene.identifier in old:
+                continue
+
+            new_count += 1
+            entry = self._create_namespace_entry_from_model(human_gene, namespace=namespace)
+            self.session.add(entry)
+
+        t = time.time()
+        log.info('got %d new entries. committing models', new_count)
+        self.session.commit()
+        log.info('committed models in %.2f seconds', time.time() - t)
+
+    def upload_bel_namespace(self):
+        """
+        :rtype: pybel.manager.models.Namespace
+        """
+        if not self.is_populated():
+            self.populate()
+
+        ns = self._get_default_namespace()
+
+        if ns is None:
+            return self._make_namespace()
+
+        self._update_namespace(ns)
+
+        return ns
