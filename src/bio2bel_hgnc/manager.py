@@ -155,7 +155,7 @@ class Manager(AbstractManager, BaseManager):
         self._hgnc_symbol_entrez_id_mapping = {}
 
     @property
-    def base(self):
+    def _base(self):
         return Base
 
     def is_populated(self):
