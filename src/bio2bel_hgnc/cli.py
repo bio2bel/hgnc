@@ -5,12 +5,11 @@ import sys
 
 import click
 
-from bio2bel.cli_utils import build_cli
 from .manager import Manager
 
 log = logging.getLogger(__name__)
 
-main = build_cli(Manager)
+main = Manager.get_cli()
 
 
 @main.command()
