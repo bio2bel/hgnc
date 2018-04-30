@@ -21,7 +21,7 @@ def get_node(graph, node, connection=None):
 
     :param pybel.BELGraph graph: A BEL graph
     :param tuple node: A PyBEL node tuple
-    :param Optional[str or bio2bel.Manager] manager: A database manager
+    :param Optional[str or bio2bel.Manager] connection: A database manager
     :rtype: pyhgnc.manager.models.HGNC
     """
     manager = Manager.ensure(connection=connection)
@@ -57,11 +57,11 @@ def add_orthologies(graph, connection=None, add_leaves=False):
     :param Optional[str or bio2bel_hgnc.Manager] connection: A database manager
     :param bool add_leaves: Should orthologs that are not already in the graph be added?
     """
-    connection = Manager.ensure(connection)
+    manager = Manager.ensure(connection)
 
     for node, data in graph.nodes(data=True):
         if NAMESPACE in data and data[NAMESPACE] == 'HGNC':
-            add_node_orthologies(graph, node, manager=connection, add_leaves=add_leaves)
+            add_node_orthologies(graph, node, manager=manager, add_leaves=add_leaves)
 
 
 def add_node_equivalencies(graph, node, connection=None, add_leaves=False):
@@ -71,8 +71,8 @@ def add_node_equivalencies(graph, node, connection=None, add_leaves=False):
     :param tuple node: A PyBEL node tuple
     :param Optional[str or bio2bel_hgnc.Manager] connection: A database manager
     """
-    connection = Manager.ensure(connection)
-    connection.add_node_equivalencies(graph, node, add_leaves=add_leaves)
+    manager = Manager.ensure(connection)
+    manager.add_node_equivalencies(graph, node, add_leaves=add_leaves)
 
 
 def add_node_central_dogma(graph, node, connection=None):
@@ -83,8 +83,8 @@ def add_node_central_dogma(graph, node, connection=None):
     :param tuple node: A PyBEL node tuple
     :param Optional[str or bio2bel_hgnc.Manager] connection: A database manager
     """
-    connection = Manager.ensure(connection)
-    return connection.add_central_dogma(graph, node)
+    manager = Manager.ensure(connection)
+    return manager.add_central_dogma(graph, node)
 
 
 def add_central_dogma(graph, connection=None):
