@@ -255,8 +255,7 @@ class Manager(AbstractManager, BaseManager):
         :param str mgi_symbol: MGI gene symbol
         :rtype: Optional[bio2bel_hgnc.models.HumanGene]
         """
-        # TODO how to deal with getting the MGI name to MGI identifiers mapping? Should this be part of Bio2BEL , or something different?
-
+        # TODO this data is not in HGNC...
         raise NotImplementedError
 
     def get_gene_by_rgd_id(self, rgd_id):
@@ -285,8 +284,7 @@ class Manager(AbstractManager, BaseManager):
         :param str rgd_symbol: RGD gene symbol
         :rtype: Optional[bio2bel_hgnc.models.HumanGene]
         """
-        # TODO how to deal with getting the RGD name to RGD identifiers mapping? Should this be part of Bio2BEL, or something different?
-
+        # TODO this data is not in HGNC...
         raise NotImplementedError
 
     def get_node(self, graph, node):
@@ -389,6 +387,13 @@ class Manager(AbstractManager, BaseManager):
         return _deal_with_nonsense(results)
 
     def _enrich_hgnc_with_entrez_equivalences(self, graph, node):
+        """
+
+        :param pybel.BELGraph graph:
+        :param node:
+        :return: the hash of the edge added
+        :rtype: str
+        """
         data = graph.node[node]
 
         namespace = data.get(NAMESPACE)
@@ -400,7 +405,7 @@ class Manager(AbstractManager, BaseManager):
         name = data[NAME]
         entrez = self.hgnc_symbol_entrez_id_mapping[name]
 
-        graph.add_equivalence(node, _func_to_dsl[func](
+        return graph.add_equivalence(node, _func_to_dsl[func](
             namespace='ENTREZ',
             name=name,
             identifier=str(entrez)
@@ -411,7 +416,7 @@ class Manager(AbstractManager, BaseManager):
 
         :param pybel.BELGraph graph: The BEL graph to enrich
         """
-        for node in graph:
+        for node in graph.nodes():
             self._enrich_hgnc_with_entrez_equivalences(graph, node)
 
     def enrich_families_with_genes(self, graph):
@@ -713,7 +718,8 @@ class Manager(AbstractManager, BaseManager):
     def _iterate_namespace_models(self):
         return tqdm(self.session.query(HumanGene), total=self.count_human_genes())
 
-    def _create_namespace_entry_from_model(self, model, namespace=None):
+    @staticmethod
+    def _create_namespace_entry_from_model(model, namespace=None):
         return NamespaceEntry(
             encoding=encodings.get(model.locus_type, 'GRP'),
             identifier=model.identifier,
