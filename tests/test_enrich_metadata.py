@@ -91,6 +91,7 @@ class TestEnrich(TemporaryCacheMixin):
         cd33_model = get_node(graph, cd33_tuple, connection=self.manager)
         self.help_check_cd33_model(cd33_model)
 
+    @unittest.skip('HGNC does not have RGD symbols')
     def test_get_rgd_node(self):
         graph = BELGraph()
 
@@ -109,6 +110,7 @@ class TestEnrich(TemporaryCacheMixin):
         cd33_model = get_node(graph, cd33_tuple, connection=self.manager)
         self.help_check_cd33_model(cd33_model)
 
+    @unittest.skip('HGNC does not have MGI symbol information')
     def test_get_mgi_node(self):
         graph = BELGraph()
 
@@ -140,18 +142,17 @@ class TestEnrich(TemporaryCacheMixin):
         graph = BELGraph()
 
         cd33_test = protein(namespace='HGNC', name='CD33')
-        cd33_tuple = graph.add_node_from_data(cd33_test)
+        graph.add_node_from_data(cd33_test)
 
-        self.assertIn(cd33_tuple, graph, msg='Graph is missing CD33 protein node')
-        self.assertIsNone(graph.get_node_label(cd33_tuple), msg='CD33 should not have label information')
-        self.assertIsNone(graph.get_node_identifier(cd33_tuple), msg='CD33 should not have identifier information')
+        self.assertIn(cd33_test.as_tuple(), graph, msg='Graph is missing CD33 protein node')
+        self.assertIsNone(graph.get_node_label(cd33_test.as_tuple()), msg='CD33 should not have label information')
+        self.assertIsNone(graph.get_node_identifier(cd33_test.as_tuple()), msg='CD33 should not have identifier information')
 
-        add_metadata(graph, cd33_tuple, manager=self.manager)
+        add_metadata(graph, cd33_test.as_tuple(), manager=self.manager)
 
-        self.assertIn(cd33_tuple, graph, msg='Graph somehow lost CD33 protein node')
+        self.assertIn(cd33_test.as_tuple(), graph, msg='Graph somehow lost CD33 protein node')
 
-        self.assertEqual('CD33 molecule', graph.get_node_label(cd33_tuple), msg='Graph should be enriched with label')
-        self.assertEqual('1659', graph.get_node_identifier(cd33_tuple), msg='Graph should be enriched with identifier')
+        self.assertEqual('1659', graph.get_node_identifier(cd33_test.as_tuple()), msg='Graph should be enriched with identifier')
 
     def test_add_equivalency(self):
         graph = BELGraph()
@@ -249,7 +250,7 @@ class TestEnrich(TemporaryCacheMixin):
         self.assertEqual(1, graph.number_of_nodes())
         self.assertEqual(0, graph.number_of_edges())
 
-        add_node_central_dogma(graph, mir489_gene_tuple)
+        add_node_central_dogma(graph, mir489_gene_tuple, connection=self.manager)
 
         self.assertEqual(2, graph.number_of_nodes())
         self.assertEqual(1, graph.number_of_edges())
@@ -264,12 +265,12 @@ class TestEnrich(TemporaryCacheMixin):
     def test_add_rna(self):
         graph = BELGraph()
         mir503hg_gene = gene(namespace='HGNC', name='MIR503HG', identifier='28258')
-        mir503hg_gene_tuple = graph.add_node_from_data(mir503hg_gene)
+        graph.add_node_from_data(mir503hg_gene)
 
         self.assertEqual(1, graph.number_of_nodes())
         self.assertEqual(0, graph.number_of_edges())
 
-        add_node_central_dogma(graph, mir503hg_gene_tuple)
+        add_node_central_dogma(graph, mir503hg_gene.as_tuple(), connection=self.manager)
 
         self.assertEqual(2, graph.number_of_nodes())
         self.assertEqual(1, graph.number_of_edges())
@@ -289,7 +290,7 @@ class TestEnrich(TemporaryCacheMixin):
         self.assertEqual(1, graph.number_of_nodes())
         self.assertEqual(0, graph.number_of_edges())
 
-        add_node_central_dogma(graph, cd33_gene_tuple)
+        add_node_central_dogma(graph, cd33_gene_tuple, connection=self.manager)
 
         self.assertEqual(3, graph.number_of_nodes())
         self.assertEqual(2, graph.number_of_edges())

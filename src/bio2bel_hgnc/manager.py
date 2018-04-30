@@ -4,6 +4,9 @@ import logging
 import time
 from collections import Counter
 
+from tqdm import tqdm
+
+from bio2bel.abstractmanager import AbstractManager
 from pybel import BELGraph, to_bel
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, IS_A, NAME, NAMESPACE, NAMESPACE_DOMAIN_GENE, PROTEIN, RNA
 from pybel.dsl import gene as gene_dsl, protein as protein_dsl, rna as rna_dsl
@@ -11,9 +14,6 @@ from pybel.manager.models import Namespace, NamespaceEntry
 from pybel.resources import get_latest_arty_namespace, write_namespace
 from pybel.resources.arty import get_today_arty_knowledge, get_today_arty_namespace
 from pybel.resources.deploy import deploy_knowledge, deploy_namespace
-from tqdm import tqdm
-
-from bio2bel.abstractmanager import AbstractManager
 from .constants import GENE_FAMILY_KEYWORD, MODULE_NAME, encodings
 from .models import Base, GeneFamily, HumanGene, MouseGene, RatGene, UniProt
 from .wrapper import BaseManager
@@ -235,7 +235,19 @@ class Manager(AbstractManager, BaseManager):
         :param str mgi_id: MGI identifier
         :rtype: Optional[bio2bel_hgnc.models.HumanGene]
         """
-        raise NotImplementedError
+        results = self.mgd(mgdid=mgi_id)
+        mouse_gene = _deal_with_nonsense(results)
+
+        if mouse_gene is None:
+            return
+
+        human_genes = mouse_gene.hgncs
+
+        if len(human_genes) > 1:
+            log.warning('multiple human genes mapped to mgi_id:%s: %s', mgi_id, human_genes)
+            return
+
+        return human_genes[0]
 
     def get_gene_by_mgi_symbol(self, mgi_symbol):
         """Gets a HGNC gene by an orthologous MGI gene symbol
@@ -253,7 +265,19 @@ class Manager(AbstractManager, BaseManager):
         :param str rgd_id: RGD identifier
         :rtype: Optional[bio2bel_hgnc.models.HumanGene]
         """
-        raise NotImplementedError
+        results = self.rgd(rgdid=rgd_id)
+        rat_gene = _deal_with_nonsense(results)
+
+        if rat_gene is None:
+            return
+
+        human_genes = rat_gene.hgncs
+
+        if len(human_genes) > 1:
+            log.warning('multiple human genes mapped to rgd_id:%s: %s', rgd_id, human_genes)
+            return
+
+        return human_genes[0]
 
     def get_gene_by_rgd_symbol(self, rgd_symbol):
         """Gets a HGNC gene by an orthologous RGD identifier
@@ -303,12 +327,22 @@ class Manager(AbstractManager, BaseManager):
                 return self.get_gene_by_mgi_symbol(name)
             raise KeyError
 
+        if namespace == 'MGIID':
+            if name is None:
+                raise KeyError
+            return self.get_gene_by_mgi_id(name)
+
         if namespace in {'RGD'}:
             if identifer is not None:
                 return self.get_gene_by_rgd_id(identifer)
             elif name is not None:
                 return self.get_gene_by_rgd_symbol(name)
             raise KeyError
+
+        if namespace == 'RGDID':
+            if name is None:
+                raise KeyError
+            return self.get_gene_by_rgd_id(name)
 
     def enrich_genes_with_families(self, graph):
         """Enrich genes in the BEL graph with their families
@@ -616,7 +650,20 @@ class Manager(AbstractManager, BaseManager):
         return set(res)
 
     def add_central_dogma(self, graph, node):
-        raise NotImplementedError
+        """
+
+        :param graph:
+        :param node:
+        :return:
+        """
+        if node not in graph:
+            raise ValueError
+
+        human_gene = self.get_node(graph, node)
+        encoding = encodings.get(human_gene.locus_type, 'GRP')
+
+        if 'R' in encoding:
+            graph.add_unqualified_edge(node, )
 
     def add_node_equivalencies(self, graph, node, add_leaves=True):
         """Given an HGNC node, add equivalencies found in the database.
