@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+"""Bio2BEL HGNC Manager."""
+
 import logging
 import time
 from collections import Counter
@@ -11,9 +13,6 @@ from pybel import BELGraph, to_bel
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, IS_A, NAME, NAMESPACE, NAMESPACE_DOMAIN_GENE, PROTEIN, RNA
 from pybel.dsl import gene as gene_dsl, protein as protein_dsl, rna as rna_dsl
 from pybel.manager.models import Namespace, NamespaceEntry
-from pybel.resources import get_latest_arty_namespace, write_namespace
-from pybel.resources.arty import get_today_arty_knowledge, get_today_arty_namespace
-from pybel.resources.deploy import deploy_knowledge, deploy_namespace
 from .constants import GENE_FAMILY_KEYWORD, MODULE_NAME, encodings
 from .models import Base, GeneFamily, HumanGene, MouseGene, RatGene, UniProt
 from .wrapper import BaseManager
@@ -114,6 +113,7 @@ def _write_gene_bel_namespace_helper(values, file):
     :param dict[str,str] values:
     :param file:
     """
+    from pybel.resources import write_namespace
     write_namespace(
         namespace_name='HGNC Human Gene Names',
         namespace_keyword='HGNC',
@@ -131,6 +131,7 @@ def _write_gene_families_bel_namespace_helper(values, file):
     :param list[str] values:
     :param file:
     """
+    from pybel.resources import write_namespace
     write_namespace(
         namespace_name='HGNC Gene Families',
         namespace_keyword='GFAM',
@@ -563,6 +564,9 @@ class Manager(AbstractManager, BaseManager):
 
         :rtype: Optional[str]
         """
+        from pybel.resources.deploy import deploy_namespace
+        from pybel.resources.arty import get_today_arty_namespace
+
         file_name = get_today_arty_namespace('hgnc')
 
         with open(file_name, 'w') as file:
@@ -579,6 +583,9 @@ class Manager(AbstractManager, BaseManager):
 
         :rtype: Optional[str]
         """
+        from pybel.resources.deploy import deploy_namespace
+        from pybel.resources.arty import get_today_arty_namespace
+
         file_name = get_today_arty_namespace('gfam')
 
         with open(file_name, 'w') as file:
@@ -591,6 +598,8 @@ class Manager(AbstractManager, BaseManager):
 
         :rtype: pybel.BELGraph
         """
+        from pybel.resources import get_latest_arty_namespace
+
         graph = BELGraph(
             name='HGNC Gene Family Definitions',
             version='1.0.0',  # FIXME use database version
@@ -623,6 +632,9 @@ class Manager(AbstractManager, BaseManager):
 
     def deploy_gene_family_bel(self):
         """Writes the Gene family memberships as BEL and deploys"""
+        from pybel.resources.deploy import deploy_knowledge
+        from pybel.resources.arty import get_today_arty_knowledge
+
         name = 'hgnc-gene-family-membership'
         file_name = get_today_arty_knowledge(name)
 
