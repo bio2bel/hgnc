@@ -160,9 +160,14 @@ class Manager(AbstractManager, BaseManager):
         return Base
 
     def is_populated(self):
+        """Check if the database is already populated.
+
+        :rtype: bool
+        """
         return 0 < self.count_human_genes()
 
     def populate(self, silent=False, hgnc_file_path=None, hcop_file_path=None, low_memory=False):
+        """Populate the database."""
         json_data = self.load_hgnc_json(hgnc_file_path=hgnc_file_path)
         self.insert_hgnc(hgnc_dict=json_data, silent=silent, low_memory=low_memory)
         self.insert_hcop(silent=silent, hcop_file_path=hcop_file_path)
