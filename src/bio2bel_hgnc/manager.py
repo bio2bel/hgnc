@@ -6,9 +6,10 @@ import logging
 import time
 from collections import Counter
 
+import click
 from tqdm import tqdm
 
-from bio2bel.abstractmanager import AbstractManager
+from bio2bel import AbstractManager
 from pybel import BELGraph, to_bel
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, IS_A, NAME, NAMESPACE, NAMESPACE_DOMAIN_GENE, PROTEIN, RNA
 from pybel.dsl import gene as gene_dsl, protein as protein_dsl, rna as rna_dsl
@@ -809,3 +810,24 @@ class Manager(AbstractManager, BaseManager):
         self._update_namespace(ns)
 
         return ns
+
+    @staticmethod
+    def _cli_add_populate(main):
+        """Overrides default method to make it possible to add more flags"""
+
+        @main.command()
+        @click.option('--reset', is_flag=True)
+        @click.option('--skip-hcop', is_flag=True)
+        @click.pass_obj
+        def populate(manager, reset, skip_hcop):
+            """Populates the database"""
+
+            if reset:
+                log.info('Deleting the previous instance of the database')
+                manager.drop_all()
+                log.info('Creating new models')
+                manager.create_all()
+
+            manager.populate(use_hcop=(not skip_hcop))
+
+        return main
