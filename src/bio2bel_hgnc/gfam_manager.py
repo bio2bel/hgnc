@@ -12,12 +12,12 @@ from .wrapper import BaseManager
 log = logging.getLogger(__name__)
 
 __all__ = [
-    'GfamManager',
+    'Manager',
     'main',
 ]
 
 
-class GfamManager(NamespaceManagerMixin, BaseManager):
+class Manager(NamespaceManagerMixin, BaseManager):
     """Bio2BEL HGNC Manager"""
 
     module_name = 'gfam'
@@ -45,7 +45,7 @@ class GfamManager(NamespaceManagerMixin, BaseManager):
         return gene_family.family_identifier
 
 
-main = GfamManager.get_cli()
+main = Manager.get_cli()
 
 if __name__ == '__main__':
     main()

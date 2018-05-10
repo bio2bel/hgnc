@@ -14,7 +14,7 @@ from pybel.constants import FUNCTION, GENE, IDENTIFIER, NAME, NAMESPACE, NAMESPA
 from pybel.dsl import gene as gene_dsl, protein as protein_dsl, rna as rna_dsl
 from pybel.manager.models import NamespaceEntry
 from .constants import GENE_FAMILY_KEYWORD, MODULE_NAME, encodings
-from .gfam_manager import GfamManager
+from .gfam_manager import Manager as GfamManager
 from .model_utils import *
 from .models import Base, GeneFamily, HumanGene, MouseGene, RatGene, UniProt
 from .wrapper import BaseManager
