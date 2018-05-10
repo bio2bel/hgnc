@@ -12,7 +12,7 @@ PACKAGES = setuptools.find_packages(where='src')
 META_PATH = os.path.join('src', 'bio2bel_hgnc', '__init__.py')
 INSTALL_REQUIRES = [
     'pybel[deployment]>=0.11.1',
-    'bio2bel>=0.0.10',
+    'bio2bel>=0.0.11',
     'tqdm',
     'sqlalchemy',
     'click',
@@ -27,7 +27,8 @@ ENTRY_POINTS = {
         'hgnc = bio2bel_hgnc'
     ],
     'console_scripts': [
-        'bio2bel_hgnc = bio2bel_hgnc.cli:main'
+        'bio2bel_hgnc = bio2bel_hgnc.cli:main',
+        'bio2bel_gfam = bio2bel_hgnc.gfam_manager:main',
     ]
 }
 

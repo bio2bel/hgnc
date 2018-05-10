@@ -3,18 +3,19 @@
 """Bio2BEL HGNC Manager."""
 
 import logging
-import time
 from collections import Counter
 
 import click
 from tqdm import tqdm
 
-from bio2bel import AbstractManager
-from pybel import BELGraph, to_bel
-from pybel.constants import FUNCTION, GENE, IDENTIFIER, IS_A, NAME, NAMESPACE, NAMESPACE_DOMAIN_GENE, PROTEIN, RNA
+from bio2bel.namespace_manager import NamespaceManagerMixin
+from pybel import BELGraph
+from pybel.constants import FUNCTION, GENE, IDENTIFIER, NAME, NAMESPACE, NAMESPACE_DOMAIN_GENE, PROTEIN, RNA
 from pybel.dsl import gene as gene_dsl, protein as protein_dsl, rna as rna_dsl
-from pybel.manager.models import Namespace, NamespaceEntry
+from pybel.manager.models import NamespaceEntry
 from .constants import GENE_FAMILY_KEYWORD, MODULE_NAME, encodings
+from .gfam_manager import GfamManager
+from .model_utils import *
 from .models import Base, GeneFamily, HumanGene, MouseGene, RatGene, UniProt
 from .wrapper import BaseManager
 
@@ -43,70 +44,6 @@ def _deal_with_nonsense(results):
         raise ValueError('{}'.format(results))
 
     return results[0]
-
-
-def gene_to_pybel(gene):
-    """Converts a Gene to a PyBEL gene
-
-    :param bio2bel_hgnc.models.HumanGene gene:  A Gene model
-    :rtype: pybel.dsl.gene
-    """
-    return gene_dsl(
-        namespace='HGNC',
-        name=str(gene.symbol),
-        identifier=str(gene.identifier)
-    )
-
-
-def gene_to_rna_to_pybel(gene):
-    """Converts a Gene to a PyBEL gene
-
-    :param bio2bel_hgnc.models.HumanGene gene:  A Gene model
-    :rtype: pybel.dsl.gene
-    """
-    return rna_dsl(
-        namespace='HGNC',
-        name=str(gene.symbol),
-        identifier=str(gene.identifier)
-    )
-
-
-def gene_to_protein_to_pybel(gene):
-    """Converts a Gene to a PyBEL gene
-
-    :param bio2bel_hgnc.models.HumanGene gene:  A Gene model
-    :rtype: pybel.dsl.gene
-    """
-    return protein_dsl(
-        namespace='HGNC',
-        name=str(gene.symbol),
-        identifier=str(gene.identifier)
-    )
-
-
-def family_to_pybel(family):
-    """Converts a Gene Family model to a PyBEL gene
-
-    :param bio2bel_hgnc.models.GeneFamily family: A Gene Family model
-    :rtype: pybel.dsl.gene
-    """
-    return gene_dsl(
-        namespace='GFAM',
-        identifier=str(family.family_identifier),
-        name=str(family.family_name)
-    )
-
-
-def uniprot_to_pybel(uniprot):
-    """
-
-    :param bio2bel_hgnc.models.UniProt uniprot:
-    :return:
-    """
-    return protein_dsl(
-        namespace='UNIPROT',
-        identifier=str(uniprot.uniprotid)
-    )
 
 
 def _write_gene_bel_namespace_helper(values, file):
@@ -145,11 +82,12 @@ def _write_gene_families_bel_namespace_helper(values, file):
     )
 
 
-class Manager(AbstractManager, BaseManager):
+class Manager(NamespaceManagerMixin, BaseManager):
     """Bio2BEL HGNC Manager"""
 
     module_name = MODULE_NAME
-    flask_admin_models = [HumanGene, GeneFamily, UniProt, MouseGene, RatGene, ]
+    flask_admin_models = [HumanGene, GeneFamily, UniProt, MouseGene, RatGene]
+    namespace_model = HumanGene
 
     def __init__(self, connection=None):
         super().__init__(connection=connection)
@@ -375,7 +313,7 @@ class Manager(AbstractManager, BaseManager):
                 continue
 
             for family in m.gene_families:
-                graph.add_unqualified_edge(n, family_to_pybel(family), IS_A)
+                graph.add_is_a(n, family_to_bel(family))
 
     def get_family_by_id(self, family_identifier):
         """Gets a gene family by its identifier
@@ -452,9 +390,12 @@ class Manager(AbstractManager, BaseManager):
                 continue
 
             for gene in gene_family_model.hgncs:
-                graph.add_is_a(gene_to_pybel(gene), gene_family_node)
+                graph.add_is_a(gene_to_bel(gene), gene_family_node)
 
     """ Mapping dictionaries"""
+
+    def _get_identifier(self, human_gene):
+        return human_gene.identifier
 
     def build_entrez_id_symbol_mapping(self):
         """Builds a mapping from ENTREZ identifier to HGNC symbol
@@ -601,55 +542,58 @@ class Manager(AbstractManager, BaseManager):
 
         return deploy_namespace(file_name, 'gfam')
 
-    def export_gene_families_to_bel_graph(self):
+    def list_families(self):
+        """
+        :rtype: list[GeneFamily]
+        """
+        return self._list_model(GeneFamily)
+
+    def list_human_genes(self):
+        """
+        :rtype: list[HumanGene]
+        """
+        return self._list_model(HumanGene)
+
+    def to_bel(self):
         """Export gene family definitions as a BEL graph
 
         :rtype: pybel.BELGraph
         """
-        from pybel.resources import get_latest_arty_namespace
-
         graph = BELGraph(
-            name='HGNC Gene Family Definitions',
+            name='HGNC Central Dogma and Gene Family Definitions',
             version='1.0.0',  # FIXME use database version
-            authors='HGNC Consortium',
-            description='Gene memberships to gene families',
+            authors='HUGO Gene Nomenclature Consortium',
+            description='Gene transcription, translation, and memberships to Gene Families.',
             contact='charles.hoyt@scai.fraunhofer.de',
         )
 
-        graph.namespace_url.update({
-            'HGNC': get_latest_arty_namespace('hgnc'),
-            'GFAM': get_latest_arty_namespace('gfam')
-        })
+        hgnc_namespace = self.upload_bel_namespace()
+        log.info('using default namespace: %s at %s', hgnc_namespace, hgnc_namespace.url)
+        graph.namespace_url[hgnc_namespace.keyword] = hgnc_namespace.url
 
-        for family in self.session.query(GeneFamily).all():
+        gfam_manager = GfamManager(connection=self.connection)
+        gfam_namespace = gfam_manager.upload_bel_namespace()
+        log.info('using default namespace: %s at %s', gfam_namespace, gfam_namespace.url)
+        graph.namespace_url[gfam_namespace.keyword] = gfam_namespace.url
+
+        for family in tqdm(self.list_families(), total=self.count_families(), desc='Gene Families'):
             for gene in family.hgncs:
                 graph.add_is_a(
-                    gene_to_pybel(gene),
-                    family_to_pybel(family)
+                    gene_to_bel(gene),
+                    family_to_bel(family)
                 )
 
+        for human_gene in tqdm(self.list_human_genes(), total=self.count_human_genes(), desc='Central dogma'):
+            encoding = encodings.get(human_gene.locus_type, 'GRP')
+
+            if 'R' in encoding:
+                rna = gene_to_rna_to_bel(human_gene)
+                graph.add_transcription(gene_to_bel(human_gene), rna)
+
+                if 'P' in encoding:
+                    graph.add_translation(rna, gene_to_protein_to_bel(human_gene))
+
         return graph
-
-    def write_gene_family_bel(self, file):
-        """Writes the Gene Family memberships as BEL
-
-        :param file:
-        """
-        graph = self.export_gene_families_to_bel_graph()
-        to_bel(graph=graph, file=file)
-
-    def deploy_gene_family_bel(self):
-        """Writes the Gene family memberships as BEL and deploys"""
-        from pybel.resources.deploy import deploy_knowledge
-        from pybel.resources.arty import get_today_arty_knowledge
-
-        name = 'hgnc-gene-family-membership'
-        file_name = get_today_arty_knowledge(name)
-
-        with open(file_name, 'w') as file:
-            self.write_gene_family_bel(file)
-
-        return deploy_knowledge(file_name, name)
 
     def get_pathway_size_distribution(self):
         """
@@ -707,15 +651,15 @@ class Manager(AbstractManager, BaseManager):
 
         for uniprot in gene.uniprots:
             graph.add_translation(
-                gene_to_pybel(gene),
-                gene_to_rna_to_pybel(gene)
+                gene_to_bel(gene),
+                gene_to_rna_to_bel(gene)
             )
             graph.add_translation(
-                gene_to_rna_to_pybel(gene),
-                gene_to_protein_to_pybel(gene),
+                gene_to_rna_to_bel(gene),
+                gene_to_protein_to_bel(gene),
             )
             graph.add_equivalence(
-                gene_to_protein_to_pybel(gene),
+                gene_to_protein_to_bel(gene),
                 uniprot_to_pybel(uniprot)
             )
 
@@ -727,89 +671,21 @@ class Manager(AbstractManager, BaseManager):
 
         if gene.mirbase:
             graph.add_translation(
-                gene_to_pybel(gene),
-                gene_to_rna_to_pybel(gene)
+                gene_to_bel(gene),
+                gene_to_rna_to_bel(gene)
             )
             graph.add_equivalence(
-                gene_to_rna_to_pybel(gene),
+                gene_to_rna_to_bel(gene),
                 rna_dsl(namespace='MIRBASE', identifier=str(gene.entrez))
             )
 
-    def _iterate_namespace_models(self):
-        return tqdm(self.session.query(HumanGene), total=self.count_human_genes())
-
-    @staticmethod
-    def _create_namespace_entry_from_model(model, namespace=None):
+    def _create_namespace_entry_from_model(self, human_gene, namespace):
         return NamespaceEntry(
-            encoding=encodings.get(model.locus_type, 'GRP'),
-            identifier=model.identifier,
-            name=model.symbol,
+            encoding=encodings.get(human_gene.locus_type, 'GRP'),
+            identifier=human_gene.identifier,
+            name=human_gene.symbol,
             namespace=namespace
         )
-
-    def _get_namespace_entries(self):
-        return [
-            self._create_namespace_entry_from_model(human_gene)
-            for human_gene in self._iterate_namespace_models()
-        ]
-
-    def _make_namespace(self):
-        """
-        :rtype: pybel.manager.models.Namespace
-        """
-        entries = self._get_namespace_entries()
-        _namespace_keyword = self._get_namespace_keyword()
-        ns = Namespace(
-            name=_namespace_keyword,
-            keyword=_namespace_keyword,
-            url=_namespace_keyword,
-            version=str(time.asctime()),
-            entries=entries,
-        )
-        self.session.add(ns)
-
-        t = time.time()
-        log.info('committing models')
-        self.session.commit()
-        log.info('committed models in %.2f seconds', time.time() - t)
-
-        return ns
-
-    def _update_namespace(self, namespace):
-        """
-        :param pybel.manager.models.Namespace namespace:
-        """
-        old = {term.identifier for term in namespace.entries}
-        new_count = 0
-
-        for human_gene in self._iterate_namespace_models():
-            if human_gene.identifier in old:
-                continue
-
-            new_count += 1
-            entry = self._create_namespace_entry_from_model(human_gene, namespace=namespace)
-            self.session.add(entry)
-
-        t = time.time()
-        log.info('got %d new entries. committing models', new_count)
-        self.session.commit()
-        log.info('committed models in %.2f seconds', time.time() - t)
-
-    def upload_bel_namespace(self):
-        """
-        :rtype: pybel.manager.models.Namespace
-        """
-        if not self.is_populated():
-            self.populate()
-
-        ns = self._get_default_namespace()
-
-        if ns is None:
-            return self._make_namespace()
-
-        self._update_namespace(ns)
-
-        return ns
 
     @staticmethod
     def _cli_add_populate(main):
