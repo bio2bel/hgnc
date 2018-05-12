@@ -576,14 +576,16 @@ class Manager(NamespaceManagerMixin, BaseManager):
         log.info('using default namespace: %s at %s', gfam_namespace, gfam_namespace.url)
         graph.namespace_url[gfam_namespace.keyword] = gfam_namespace.url
 
-        for family in tqdm(self.list_families(), total=self.count_families(), desc='Gene Families'):
+        for family in tqdm(self.list_families(), total=self.count_families(),
+                           desc='Mapping gene family definitions to BEL'):
             for gene in family.hgncs:
                 graph.add_is_a(
                     gene_to_bel(gene),
                     family_to_bel(family)
                 )
 
-        for human_gene in tqdm(self.list_human_genes(), total=self.count_human_genes(), desc='Central dogma'):
+        for human_gene in tqdm(self.list_human_genes(), total=self.count_human_genes(),
+                               desc='Mapping central dogma to BEL'):
             encoding = encodings.get(human_gene.locus_type, 'GRP')
 
             if 'R' in encoding:
