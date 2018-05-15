@@ -4,7 +4,7 @@
 
 from .manager import Manager
 
-__version__ = '0.0.7-dev'
+__version__ = '0.0.7'
 
 __title__ = 'bio2bel_hgnc'
 __description__ = "A package for converting HGNC to BEL"
