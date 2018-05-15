@@ -23,9 +23,6 @@ ENTRY_POINTS = {
     'bio2bel': [
         'hgnc = bio2bel_hgnc',
     ],
-    'compath': [
-        'hgnc = bio2bel_hgnc'
-    ],
     'console_scripts': [
         'bio2bel_hgnc = bio2bel_hgnc.cli:main',
         'bio2bel_gfam = bio2bel_hgnc.gfam_manager:main',
