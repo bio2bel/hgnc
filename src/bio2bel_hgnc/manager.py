@@ -2,10 +2,10 @@
 
 """Bio2BEL HGNC Manager."""
 
-import logging
 from collections import Counter
 
 import click
+import logging
 from tqdm import tqdm
 
 from bio2bel.namespace_manager import NamespaceManagerMixin
@@ -508,39 +508,9 @@ class Manager(NamespaceManagerMixin, BaseManager):
         values = self._get_gene_encodings()
         _write_gene_bel_namespace_helper(values, file)
 
-    def deploy_gene_bel_namespace(self):
-        """Creates and deploys the Gene Names Namespace
-
-        :rtype: Optional[str]
-        """
-        from pybel.resources.deploy import deploy_namespace
-        from pybel.resources.arty import get_today_arty_namespace
-
-        file_name = get_today_arty_namespace('hgnc')
-
-        with open(file_name, 'w') as file:
-            self.write_gene_bel_namespace(file)
-
-        return deploy_namespace(file_name, module_name='hgnc')
-
     def write_gene_family_bel_namespace(self, file):
         values = [name for name, in self.session.query(GeneFamily.family_name).all()]
         _write_gene_families_bel_namespace_helper(values=values, file=file)
-
-    def deploy_gene_family_bel_namespace(self):
-        """Creates and deploys the Gene Families Namespace
-
-        :rtype: Optional[str]
-        """
-        from pybel.resources.deploy import deploy_namespace
-        from pybel.resources.arty import get_today_arty_namespace
-
-        file_name = get_today_arty_namespace('gfam')
-
-        with open(file_name, 'w') as file:
-            self.write_gene_family_bel_namespace(file)
-
-        return deploy_namespace(file_name, 'gfam')
 
     def list_families(self):
         """
