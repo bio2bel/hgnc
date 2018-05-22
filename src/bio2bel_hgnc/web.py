@@ -8,13 +8,10 @@ use the web extra like:
     pip install bio2bel_hgnc[web]
 """
 
-import logging
-
 from bio2bel_hgnc.manager import Manager
 
-log = logging.getLogger(__name__)
+manager = Manager()
+app = manager.get_flask_admin_app()
 
 if __name__ == '__main__':
-    manager = Manager()
-    app_ = manager.get_flask_admin_app()
-    app_.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5000)
