@@ -4,3 +4,6 @@ tqdm
 sqlalchemy
 click
 pyhgnc
+
+flask[web]
+flask_admin[web]
