@@ -8,7 +8,6 @@ from .manager import Manager
 
 __all__ = [
     'get_node',
-    'add_metadata',
     'add_node_orthologies',
     'add_orthologies',
     'add_node_central_dogma',
@@ -26,16 +25,6 @@ def get_node(graph, node, connection=None):
     """
     manager = Manager.ensure(connection=connection)
     return manager.get_node(graph, node)
-
-
-def add_metadata(graph, node, manager=None):
-    """Add to the node based on PyHGNC's database
-
-    :param pybel.BELGraph graph: A BEL Graph
-    :param tuple node: A PyBEL node tuple
-    :param Optional[str or bio2bel_hgnc.Manager] manager: A database manager
-    """
-    raise NotImplementedError
 
 
 def add_node_orthologies(graph, node, manager=None, add_leaves=False):

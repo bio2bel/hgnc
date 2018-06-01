@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Exports HGNC Equivalences"""
+"""A package for converting HGNC to BEL."""
 
 from .manager import Manager
 

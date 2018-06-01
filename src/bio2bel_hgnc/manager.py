@@ -2,20 +2,24 @@
 
 """Bio2BEL HGNC Manager."""
 
+import logging
 from collections import Counter
 
 import click
-import logging
-from tqdm import tqdm
-
-from bio2bel.namespace_manager import NamespaceManagerMixin
 from pybel import BELGraph
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, NAME, NAMESPACE, NAMESPACE_DOMAIN_GENE, PROTEIN, RNA
 from pybel.dsl import gene as gene_dsl, protein as protein_dsl, rna as rna_dsl
 from pybel.manager.models import NamespaceEntry
+from pybel.resources import write_namespace
+from tqdm import tqdm
+
+from bio2bel.namespace_manager import NamespaceManagerMixin
 from .constants import GENE_FAMILY_KEYWORD, MODULE_NAME, encodings
 from .gfam_manager import Manager as GfamManager
-from .model_utils import *
+from .model_utils import (
+    family_to_bel, gene_to_bel, gene_to_mirna_to_bel, gene_to_protein_to_bel, gene_to_rna_to_bel,
+    uniprot_to_pybel,
+)
 from .models import Base, GeneFamily, HumanGene, MouseGene, RatGene, UniProt
 from .wrapper import BaseManager
 
@@ -51,7 +55,6 @@ def _write_gene_bel_namespace_helper(values, file):
     :param dict[str,str] values:
     :param file:
     """
-    from pybel.resources import write_namespace
     write_namespace(
         namespace_name='HGNC Human Gene Names',
         namespace_keyword='HGNC',
@@ -69,7 +72,6 @@ def _write_gene_families_bel_namespace_helper(values, file):
     :param list[str] values:
     :param file:
     """
-    from pybel.resources import write_namespace
     write_namespace(
         namespace_name='HGNC Gene Families',
         namespace_keyword='GFAM',
@@ -196,15 +198,6 @@ class Manager(NamespaceManagerMixin, BaseManager):
 
         return human_genes[0]
 
-    def get_gene_by_mgi_symbol(self, mgi_symbol):
-        """Gets a HGNC gene by an orthologous MGI gene symbol
-
-        :param str mgi_symbol: MGI gene symbol
-        :rtype: Optional[bio2bel_hgnc.models.HumanGene]
-        """
-        # TODO this data is not in HGNC...
-        raise NotImplementedError
-
     def get_gene_by_rgd_id(self, rgd_id):
         """Gets a HGNC gene by an orthologous RGD identifier
 
@@ -224,15 +217,6 @@ class Manager(NamespaceManagerMixin, BaseManager):
             return
 
         return human_genes[0]
-
-    def get_gene_by_rgd_symbol(self, rgd_symbol):
-        """Gets a HGNC gene by an orthologous RGD identifier
-
-        :param str rgd_symbol: RGD gene symbol
-        :rtype: Optional[bio2bel_hgnc.models.HumanGene]
-        """
-        # TODO this data is not in HGNC...
-        raise NotImplementedError
 
     def get_node(self, graph, node):
         """Gets a node from the database, whether it has a HGNC, RGD, MGI, or EG identifier.
@@ -591,11 +575,10 @@ class Manager(NamespaceManagerMixin, BaseManager):
         return set(res)
 
     def add_central_dogma(self, graph, node):
-        """
+        """Add the central dogma of biology.
 
         :param graph:
         :param node:
-        :return:
         """
         if node not in graph:
             raise ValueError
@@ -603,8 +586,22 @@ class Manager(NamespaceManagerMixin, BaseManager):
         human_gene = self.get_node(graph, node)
         encoding = encodings.get(human_gene.locus_type, 'GRP')
 
-        if 'R' in encoding:
-            graph.add_unqualified_edge(node, )
+        if 'M' in encoding:
+            rna = gene_to_rna_to_bel(human_gene)
+            graph.add_transcription(gene_to_bel(human_gene), rna)
+        elif 'R' in encoding:
+            rna = gene_to_mirna_to_bel(human_gene)
+            graph.add_transcription(gene_to_bel(human_gene), rna)
+        else:
+            return
+
+        if 'P' not in encoding:
+            return rna
+        else:
+            protein = gene_to_protein_to_bel(human_gene)
+            graph.add_translation(rna, protein)
+            return protein
+
 
     def add_node_equivalencies(self, graph, node, add_leaves=True):
         """Given an HGNC node, add equivalencies found in the database.

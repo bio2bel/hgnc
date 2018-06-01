@@ -1,58 +1,24 @@
 # -*- coding: utf-8 -*-
 
 import logging
-import os
-import tempfile
 import unittest
 
-import pyhgnc
-from bio2bel_hgnc import Manager
-from bio2bel_hgnc.constants import GENE_FAMILY_KEYWORD
-from bio2bel_hgnc.enrich import (
-    add_metadata, add_node_central_dogma, add_node_equivalencies, add_node_orthologies, get_node,
-)
 from pybel import BELGraph
 from pybel.constants import EQUIVALENT_TO, ORTHOLOGOUS, RELATION, TRANSCRIBED_TO, TRANSLATED_TO, unqualified_edge_code
 from pybel.dsl import gene, mirna, protein, rna
 from pybel.tokens import node_to_tuple
-from tests.constants import hcop_test_path, hgnc_test_path
+
+from bio2bel_hgnc.constants import GENE_FAMILY_KEYWORD
+from bio2bel_hgnc.enrich import (
+    add_node_equivalencies, add_node_orthologies, get_node,
+)
+from tests.cases import TemporaryCacheMixin
 
 log = logging.getLogger(__name__)
 
 translate_code = unqualified_edge_code[TRANSLATED_TO]
 transcribe_code = unqualified_edge_code[TRANSCRIBED_TO]
 equivalence_code = unqualified_edge_code[EQUIVALENT_TO]
-
-
-class TemporaryCacheMixin(unittest.TestCase):
-    """
-    :type file_handle: int
-    :type path: str
-    :type manager: pyhgnc.manager.query.QueryManager
-    """
-    file_handle, path, manager = None, None, None
-
-    @classmethod
-    def setUpClass(cls):
-        """Create and populate temporary PyHGNC cache"""
-        cls.file_handle, cls.path = tempfile.mkstemp()
-        cls.connection = 'sqlite:///' + cls.path
-        log.info('Test generated connection string %s', cls.connection)
-
-        pyhgnc.update(
-            connection=cls.connection,
-            hgnc_file_path=hgnc_test_path,
-            hcop_file_path=hcop_test_path,
-        )
-
-        cls.manager = Manager(connection=cls.connection)
-
-    @classmethod
-    def tearDownClass(cls):
-        """Deletes the temporary PyHGNC cache"""
-        cls.manager.session.close()
-        os.close(cls.file_handle)
-        os.remove(cls.path)
 
 
 class TestEnrich(TemporaryCacheMixin):
@@ -138,22 +104,6 @@ class TestEnrich(TemporaryCacheMixin):
         cd33_model = get_node(graph, cd33_tuple, connection=self.manager)
         self.help_check_cd33_model(cd33_model)
 
-    def test_add_metadata(self):
-        graph = BELGraph()
-
-        cd33_test = protein(namespace='HGNC', name='CD33')
-        graph.add_node_from_data(cd33_test)
-
-        self.assertIn(cd33_test.as_tuple(), graph, msg='Graph is missing CD33 protein node')
-        self.assertIsNone(graph.get_node_label(cd33_test.as_tuple()), msg='CD33 should not have label information')
-        self.assertIsNone(graph.get_node_identifier(cd33_test.as_tuple()), msg='CD33 should not have identifier information')
-
-        add_metadata(graph, cd33_test.as_tuple(), manager=self.manager)
-
-        self.assertIn(cd33_test.as_tuple(), graph, msg='Graph somehow lost CD33 protein node')
-
-        self.assertEqual('1659', graph.get_node_identifier(cd33_test.as_tuple()), msg='Graph should be enriched with identifier')
-
     def test_add_equivalency(self):
         graph = BELGraph()
         cd33_hgnc_tuple = graph.add_node_from_data(protein(name='CD33', namespace='HGNC'))
@@ -162,7 +112,7 @@ class TestEnrich(TemporaryCacheMixin):
         self.assertEqual(2, graph.number_of_nodes())
         self.assertEqual(0, graph.number_of_edges())
 
-        add_node_equivalencies(graph, cd33_hgnc_tuple, connection=self.manager, add_leaves=False)
+        self.manager.add_node_equivalencies(graph, cd33_hgnc_tuple, add_leaves=False)
 
         self.assertEqual(2, graph.number_of_nodes())
         self.assertEqual(2, graph.number_of_edges())
@@ -250,8 +200,9 @@ class TestEnrich(TemporaryCacheMixin):
         self.assertEqual(1, graph.number_of_nodes())
         self.assertEqual(0, graph.number_of_edges())
 
-        add_node_central_dogma(graph, mir489_gene_tuple, connection=self.manager)
-
+        result = self.manager.add_central_dogma(graph, mir489_gene_tuple)
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, mirna)
         self.assertEqual(2, graph.number_of_nodes())
         self.assertEqual(1, graph.number_of_edges())
 
@@ -265,12 +216,14 @@ class TestEnrich(TemporaryCacheMixin):
     def test_add_rna(self):
         graph = BELGraph()
         mir503hg_gene = gene(namespace='HGNC', name='MIR503HG', identifier='28258')
-        graph.add_node_from_data(mir503hg_gene)
+        mir503hg_gene_tuple = graph.add_node_from_data(mir503hg_gene)
 
         self.assertEqual(1, graph.number_of_nodes())
         self.assertEqual(0, graph.number_of_edges())
 
-        add_node_central_dogma(graph, mir503hg_gene.as_tuple(), connection=self.manager)
+        result = self.manager.add_central_dogma(graph, mir503hg_gene_tuple)
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, mirna)
 
         self.assertEqual(2, graph.number_of_nodes())
         self.assertEqual(1, graph.number_of_edges())
@@ -290,7 +243,9 @@ class TestEnrich(TemporaryCacheMixin):
         self.assertEqual(1, graph.number_of_nodes())
         self.assertEqual(0, graph.number_of_edges())
 
-        add_node_central_dogma(graph, cd33_gene_tuple, connection=self.manager)
+        result = self.manager.add_central_dogma(graph, cd33_gene_tuple)
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, protein)
 
         self.assertEqual(3, graph.number_of_nodes())
         self.assertEqual(2, graph.number_of_edges())
@@ -329,6 +284,7 @@ class TestEnrich(TemporaryCacheMixin):
             self.assertIn(g.as_tuple(), graph.edge[cd33_gene_tuple])
 
     def test_enrich_family_with_genes(self):
+        """Test enrichment of genes members on gene families."""
         graph = BELGraph()
         f = gene(name="CD molecules", namespace=GENE_FAMILY_KEYWORD)
         graph.add_node_from_data(f)
@@ -345,7 +301,3 @@ class TestEnrich(TemporaryCacheMixin):
             g = gene(namespace='HGNC', name=x)
             self.assertTrue(graph.has_node_with_data(g))
             self.assertIn(f.as_tuple(), graph.edge[g.as_tuple()])
-
-    def test_enrich_families_with_genes(self):
-        """For gene families, adds their member genes"""
-        raise NotImplementedError

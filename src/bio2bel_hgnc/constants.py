@@ -7,7 +7,6 @@ from bio2bel.utils import get_connection, get_data_dir
 MODULE_NAME = 'hgnc'
 #: The default directory where PyBEL files, including logs and the  default cache, are stored. Created if not exists.
 DATA_DIR = get_data_dir(MODULE_NAME)
-DEFAULT_CACHE_CONNECTION = get_connection(MODULE_NAME)
 
 GENE_FAMILY_KEYWORD = 'GFAM'
 
