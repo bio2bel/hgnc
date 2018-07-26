@@ -2,18 +2,20 @@
 
 """Bio2BEL HGNC Manager."""
 
-import logging
 from collections import Counter
 
 import click
+import logging
+from tqdm import tqdm
+
+from bio2bel import AbstractManager
+from bio2bel.manager.flask_manager import FlaskMixin
+from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
 from pybel import BELGraph
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, NAME, NAMESPACE, NAMESPACE_DOMAIN_GENE, PROTEIN, RNA
 from pybel.dsl import gene as gene_dsl, protein as protein_dsl, rna as rna_dsl
 from pybel.manager.models import NamespaceEntry
 from pybel.resources import write_namespace
-from tqdm import tqdm
-
-from bio2bel.namespace_manager import NamespaceManagerMixin
 from .constants import GENE_FAMILY_KEYWORD, MODULE_NAME, encodings
 from .gfam_manager import Manager as GfamManager
 from .model_utils import (
@@ -84,15 +86,22 @@ def _write_gene_families_bel_namespace_helper(values, file):
     )
 
 
-class Manager(NamespaceManagerMixin, BaseManager):
-    """Bio2BEL HGNC Manager"""
+class Manager(AbstractManager, FlaskMixin, BELNamespaceManagerMixin, BaseManager):
+    """Bio2BEL HGNC Manager."""
 
     module_name = MODULE_NAME
-    flask_admin_models = [HumanGene, GeneFamily, UniProt, MouseGene, RatGene]
-    namespace_model = HumanGene
 
-    def __init__(self, connection=None):
-        super().__init__(connection=connection)
+    namespace_model = HumanGene
+    identifiers_reccommended = 'HGNC'
+    identifiers_pattern = '^((HGNC|hgnc):)?\d{1,5}$'
+    identifiers_miriam = 'MIR:00000080'
+    identifiers_namespace = 'hgnc'
+    identifiers_url = 'http://identifiers.org/hgnc/'
+
+    flask_admin_models = [HumanGene, GeneFamily, UniProt, MouseGene, RatGene]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self._hgnc_symbol_entrez_id_mapping = {}
 
@@ -601,7 +610,6 @@ class Manager(NamespaceManagerMixin, BaseManager):
             protein = gene_to_protein_to_bel(human_gene)
             graph.add_translation(rna, protein)
             return protein
-
 
     def add_node_equivalencies(self, graph, node, add_leaves=True):
         """Given an HGNC node, add equivalencies found in the database.

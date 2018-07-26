@@ -4,7 +4,8 @@
 
 import logging
 
-from bio2bel.namespace_manager import NamespaceManagerMixin
+from bio2bel import AbstractManager
+from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
 from pybel.manager.models import NamespaceEntry
 from .models import Base, GeneFamily
 from .wrapper import BaseManager
@@ -17,11 +18,17 @@ __all__ = [
 ]
 
 
-class Manager(NamespaceManagerMixin, BaseManager):
+class Manager(AbstractManager, BELNamespaceManagerMixin, BaseManager):
     """Bio2BEL HGNC Manager"""
 
     module_name = 'gfam'
     namespace_model = GeneFamily
+
+    identifiers_reccommended = 'HGNC gene family'
+    identifiers_pattern = '^\d+$'
+    identifiers_miriam = 'MIR:00000573'
+    identifiers_namespace = 'hgnc.genefamily'
+    identifiers_url = 'http://identifiers.org/hgnc.genefamily/'
 
     @property
     def _base(self):

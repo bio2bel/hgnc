@@ -46,7 +46,7 @@ class TestEnrich(TemporaryCacheMixin):
 
         cd33_tuple = graph.add_node_from_data(protein(name='CD33', namespace='HGNC'))
 
-        cd33_model = get_node(graph, cd33_tuple, connection=self.manager)
+        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
         self.help_check_cd33_model(cd33_model)
 
     def test_get_hgnc_id_node(self):
@@ -54,7 +54,7 @@ class TestEnrich(TemporaryCacheMixin):
 
         cd33_tuple = graph.add_node_from_data(protein(identifier='1659', namespace='HGNC'))
 
-        cd33_model = get_node(graph, cd33_tuple, connection=self.manager)
+        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
         self.help_check_cd33_model(cd33_model)
 
     @unittest.skip('HGNC does not have RGD symbols')
@@ -64,7 +64,7 @@ class TestEnrich(TemporaryCacheMixin):
         # CD33's MGI counterpart's identifier
         cd33_tuple = graph.add_node_from_data(protein(name='Cd33', namespace='RGD'))
 
-        cd33_model = get_node(graph, cd33_tuple, connection=self.manager)
+        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
         self.help_check_cd33_model(cd33_model)
 
     def test_get_rgd_id_node(self):
@@ -73,7 +73,7 @@ class TestEnrich(TemporaryCacheMixin):
         # CD33's RGD counterpart's identifier
         cd33_tuple = graph.add_node_from_data(protein(identifier='1596020', namespace='RGD'))
 
-        cd33_model = get_node(graph, cd33_tuple, connection=self.manager)
+        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
         self.help_check_cd33_model(cd33_model)
 
     @unittest.skip('HGNC does not have MGI symbol information')
@@ -83,7 +83,7 @@ class TestEnrich(TemporaryCacheMixin):
         # CD33's MGI counterpart's identifier
         cd33_tuple = graph.add_node_from_data(protein(name='Cd33', namespace='MGI'))
 
-        cd33_model = get_node(graph, cd33_tuple, connection=self.manager)
+        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
         self.help_check_cd33_model(cd33_model)
 
     def test_get_mgi_id_node(self):
@@ -92,7 +92,7 @@ class TestEnrich(TemporaryCacheMixin):
         # CD33's MGI counterpart's identifier
         cd33_tuple = graph.add_node_from_data(protein(identifier='99440', namespace='MGI'))
 
-        cd33_model = get_node(graph, cd33_tuple, connection=self.manager)
+        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
         self.help_check_cd33_model(cd33_model)
 
     def test_get_entrez_node(self):
@@ -101,7 +101,7 @@ class TestEnrich(TemporaryCacheMixin):
         # CD33's MGI counterpart's identifier
         cd33_tuple = graph.add_node_from_data(protein(identifier='945', namespace='ENTREZ'))
 
-        cd33_model = get_node(graph, cd33_tuple, connection=self.manager)
+        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
         self.help_check_cd33_model(cd33_model)
 
     def test_add_equivalency(self):
@@ -133,7 +133,7 @@ class TestEnrich(TemporaryCacheMixin):
 
         self.assertEqual(1, graph.number_of_nodes())
 
-        add_node_equivalencies(graph, cd33_hgnc_tuple, connection=self.manager, add_leaves=True)
+        add_node_equivalencies(graph, cd33_hgnc_tuple, manager=self.manager, add_leaves=True)
 
         cd33_entrez = protein(identifier='945', namespace='ENTREZ')
 
