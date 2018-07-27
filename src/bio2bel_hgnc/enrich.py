@@ -55,7 +55,7 @@ def add_orthologies(graph, manager=None, add_leaves=False):
             add_node_orthologies(graph, node, manager=manager, add_leaves=add_leaves)
 
 
-def add_node_equivalencies(graph, node, manager=None, add_leaves=False):
+def add_node_equivalencies(graph, node, manager=None):
     """Given an HGNC node, add all equivalencies to EG and UniProt
 
     :param pybel.BELGraph graph: A BEL graph
@@ -64,7 +64,7 @@ def add_node_equivalencies(graph, node, manager=None, add_leaves=False):
     """
     if manager is None:
         manager = Manager()
-    manager.add_node_equivalencies(graph, node, add_leaves=add_leaves)
+    manager.add_node_equivalencies(graph, node)
 
 
 def add_node_central_dogma(graph, node, manager=None):
