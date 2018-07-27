@@ -9,13 +9,13 @@ import logging
 from tqdm import tqdm
 
 from bio2bel import AbstractManager
+from bio2bel.manager.bel_manager import BELManagerMixin
 from bio2bel.manager.flask_manager import FlaskMixin
 from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
 from pybel import BELGraph
-from pybel.constants import FUNCTION, GENE, IDENTIFIER, NAME, NAMESPACE, NAMESPACE_DOMAIN_GENE, PROTEIN, RNA
+from pybel.constants import FUNCTION, GENE, IDENTIFIER, NAME, NAMESPACE, PROTEIN, RNA
 from pybel.dsl import gene as gene_dsl, protein as protein_dsl, rna as rna_dsl
 from pybel.manager.models import NamespaceEntry
-from pybel.resources import write_namespace
 from .constants import GENE_FAMILY_KEYWORD, MODULE_NAME, encodings
 from .gfam_manager import Manager as GfamManager
 from .model_utils import (
@@ -52,41 +52,7 @@ def _deal_with_nonsense(results):
     return results[0]
 
 
-def _write_gene_bel_namespace_helper(values, file):
-    """
-    :param dict[str,str] values:
-    :param file:
-    """
-    write_namespace(
-        namespace_name='HGNC Human Gene Names',
-        namespace_keyword='HGNC',
-        namespace_domain=NAMESPACE_DOMAIN_GENE,
-        author_name='Charles Tapley Hoyt',
-        citation_name='HGNC?',
-        values=values,
-        functions='G',
-        file=file
-    )
-
-
-def _write_gene_families_bel_namespace_helper(values, file):
-    """
-    :param list[str] values:
-    :param file:
-    """
-    write_namespace(
-        namespace_name='HGNC Gene Families',
-        namespace_keyword='GFAM',
-        namespace_domain=NAMESPACE_DOMAIN_GENE,
-        author_name='Charles Tapley Hoyt',
-        citation_name='HGNC?',
-        values=values,
-        functions='G',
-        file=file
-    )
-
-
-class Manager(AbstractManager, FlaskMixin, BELNamespaceManagerMixin, BaseManager):
+class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerMixin, BaseManager):
     """Bio2BEL HGNC Manager."""
 
     module_name = MODULE_NAME
@@ -497,14 +463,6 @@ class Manager(AbstractManager, FlaskMixin, BELNamespaceManagerMixin, BaseManager
             for symbol, locus_type in self.session.query(HumanGene.symbol, HumanGene.locus_type).all()
         }
 
-    def write_gene_bel_namespace(self, file):
-        values = self._get_gene_encodings()
-        _write_gene_bel_namespace_helper(values, file)
-
-    def write_gene_family_bel_namespace(self, file):
-        values = [name for name, in self.session.query(GeneFamily.family_name).all()]
-        _write_gene_families_bel_namespace_helper(values=values, file=file)
-
     def list_families(self):
         """
         :rtype: list[GeneFamily]
@@ -627,18 +585,13 @@ class Manager(AbstractManager, FlaskMixin, BELNamespaceManagerMixin, BaseManager
             return
 
         for uniprot in gene.uniprots:
-            graph.add_translation(
-                gene_to_bel(gene),
-                gene_to_rna_to_bel(gene)
-            )
-            graph.add_translation(
-                gene_to_rna_to_bel(gene),
-                gene_to_protein_to_bel(gene),
-            )
-            graph.add_equivalence(
-                gene_to_protein_to_bel(gene),
-                uniprot_to_pybel(uniprot)
-            )
+            gene_node = gene_to_bel(gene)
+            rna_node = gene_to_rna_to_bel(gene)
+            protein_node = gene_to_protein_to_bel(gene)
+
+            graph.add_transcription(gene_node, rna_node)
+            graph.add_translation(rna_node, protein_node)
+            graph.add_equivalence(protein_node, uniprot_to_pybel(uniprot))
 
         if gene.entrez:
             graph.add_equivalence(
@@ -647,14 +600,8 @@ class Manager(AbstractManager, FlaskMixin, BELNamespaceManagerMixin, BaseManager
             )
 
         if gene.mirbase:
-            graph.add_translation(
-                gene_to_bel(gene),
-                gene_to_rna_to_bel(gene)
-            )
-            graph.add_equivalence(
-                gene_to_rna_to_bel(gene),
-                rna_dsl(namespace='MIRBASE', identifier=str(gene.entrez))
-            )
+            mirbase_rna_node = rna_dsl(namespace='MIRBASE', identifier=str(gene.entrez))
+            graph.add_equivalence(rna_node, mirbase_rna_node)
 
     def _create_namespace_entry_from_model(self, human_gene, namespace):
         return NamespaceEntry(
