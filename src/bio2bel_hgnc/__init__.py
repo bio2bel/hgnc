@@ -3,6 +3,7 @@
 """A package for converting HGNC to BEL."""
 
 from .manager import Manager
+from .utils import get_version
 
 __version__ = '0.0.9-dev'
 
