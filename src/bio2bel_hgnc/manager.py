@@ -92,7 +92,7 @@ class Manager(AbstractManager, FlaskMixin, BELNamespaceManagerMixin, BaseManager
     module_name = MODULE_NAME
 
     namespace_model = HumanGene
-    identifiers_reccommended = 'HGNC'
+    identifiers_recommended = 'HGNC'
     identifiers_pattern = '^((HGNC|hgnc):)?\d{1,5}$'
     identifiers_miriam = 'MIR:00000080'
     identifiers_namespace = 'hgnc'
