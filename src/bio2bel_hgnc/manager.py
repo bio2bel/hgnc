@@ -2,10 +2,10 @@
 
 """Bio2BEL HGNC Manager."""
 
+import logging
 from collections import Counter
 
 import click
-import logging
 from tqdm import tqdm
 
 from bio2bel import AbstractManager
@@ -15,6 +15,7 @@ from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
 from pybel import BELGraph
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, NAME, NAMESPACE, PROTEIN, RNA
 from pybel.dsl import gene as gene_dsl, protein as protein_dsl, rna as rna_dsl
+from pybel.dsl.nodes import BaseEntity
 from pybel.manager.models import NamespaceEntry
 from .constants import GENE_FAMILY_KEYWORD, MODULE_NAME, encodings
 from .gfam_manager import Manager as GfamManager
@@ -197,11 +198,15 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         """Gets a node from the database, whether it has a HGNC, RGD, MGI, or EG identifier.
 
         :param pybel.BELGraph graph: A BEL graph
-        :param tuple node: A PyBEL node tuple
+        :param node: A PyBEL node tuple
+        :type node: tuple or BaseEntity
         :rtype: bio2bel.models.HGNC
         :raises: KeyError
         """
-        data = graph.node[node]
+        if isinstance(node, BaseEntity):
+            data = node
+        else:
+            data = graph.node[node]
 
         if NAMESPACE not in data:
             raise KeyError
@@ -547,20 +552,19 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         :param graph:
         :param node:
         """
-        if node not in graph:
-            raise ValueError
-
         human_gene = self.get_node(graph, node)
         encoding = encodings.get(human_gene.locus_type, 'GRP')
 
         if 'M' in encoding:
-            rna = gene_to_rna_to_bel(human_gene)
-            graph.add_transcription(gene_to_bel(human_gene), rna)
-        elif 'R' in encoding:
             rna = gene_to_mirna_to_bel(human_gene)
             graph.add_transcription(gene_to_bel(human_gene), rna)
-        else:
+            return rna
+
+        if 'R' not in encoding:
             return
+
+        rna = gene_to_rna_to_bel(human_gene)
+        graph.add_transcription(gene_to_bel(human_gene), rna)
 
         if 'P' not in encoding:
             return rna
@@ -569,7 +573,44 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
             graph.add_translation(rna, protein)
             return protein
 
-    def add_node_equivalencies(self, graph, node, add_leaves=True):
+    def _add_protein_equivalencies(self, graph, node):
+        human_gene = self.get_node(graph, node)
+        if human_gene is None:
+            return
+
+        for uniprot in human_gene.uniprots:
+            gene_node = gene_to_bel(human_gene)
+            rna_node = gene_to_rna_to_bel(human_gene)
+            protein_node = gene_to_protein_to_bel(human_gene)
+
+            graph.add_transcription(gene_node, rna_node)
+            graph.add_translation(rna_node, protein_node)
+            graph.add_equivalence(protein_node, uniprot_to_pybel(uniprot))
+
+    def _add_gene_equivalencies(self, graph, node):
+        gene = self.get_node(graph, node)
+        if gene is None:
+            return
+
+        if gene.entrez:
+            graph.add_equivalence(
+                node,
+                gene_dsl(namespace='ENTREZ', identifier=str(gene.entrez))
+            )
+
+    def _add_rna_equivalences(self, graph, node):
+        human_gene = self.get_node(graph, node)
+        if human_gene is None:
+            return
+
+        if human_gene.mirbase:
+            gene_node = gene_to_bel(human_gene)
+            rna_node = gene_to_rna_to_bel(human_gene)
+            graph.add_transcription(gene_node, rna_node)
+            mirbase_rna_node = rna_dsl(namespace='MIRBASE', identifier=str(human_gene.entrez))
+            graph.add_equivalence(rna_node, mirbase_rna_node)
+
+    def add_node_equivalencies(self, graph, node):
         """Given an HGNC node, add equivalencies found in the database.
 
          - Entrez
@@ -578,30 +619,8 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
 
         :param pybel.BELGraph graph: A BEL graph
         :param tuple node: A PyBEL node tuple
-        :param bool add_leaves: Should equivalencies that are not already in the graph be added?
         """
-        gene = self.get_node(graph, node)
-        if gene is None:
-            return
-
-        for uniprot in gene.uniprots:
-            gene_node = gene_to_bel(gene)
-            rna_node = gene_to_rna_to_bel(gene)
-            protein_node = gene_to_protein_to_bel(gene)
-
-            graph.add_transcription(gene_node, rna_node)
-            graph.add_translation(rna_node, protein_node)
-            graph.add_equivalence(protein_node, uniprot_to_pybel(uniprot))
-
-        if gene.entrez:
-            graph.add_equivalence(
-                node,
-                gene_dsl(namespace='ENTREZ', identifier=str(gene.entrez))
-            )
-
-        if gene.mirbase:
-            mirbase_rna_node = rna_dsl(namespace='MIRBASE', identifier=str(gene.entrez))
-            graph.add_equivalence(rna_node, mirbase_rna_node)
+        return self._add_gene_equivalencies(graph, node)
 
     def _create_namespace_entry_from_model(self, human_gene, namespace):
         return NamespaceEntry(
