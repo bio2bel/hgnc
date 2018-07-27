@@ -1,0 +1,36 @@
+# Follow guide at https://realpython.com/blog/python/dockerizing-flask-with-compose-and-machine-from-localhost-to-the-cloud/
+# add more workers in gunicorn with -w 4
+
+version: '3'
+
+services:
+  web:
+    build: .
+    volumes:
+     - .:/app
+    environment:
+      BIO2BEL_CONNECTION: "mysql+mysqldb://bio2bel:bio2bel@db/bio2bel?charset=utf8"
+      SECRET_KEY: "bio2bel_secret_key"
+    restart: always
+    command: gunicorn -b 0.0.0.0:5000 bio2bel_hgnc.web:app --log-level=INFO
+
+    ports:
+      - "5000:5000"
+    depends_on:
+     - db
+
+  db:
+    image: mysql:5.7
+    volumes:
+       - db_data:/var/lib/mysql
+    environment:
+      MYSQL_USER: bio2bel
+      MYSQL_PASSWORD: bio2bel
+      MYSQL_DATABASE: bio2bel
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+        - 3306:3306
+    command: mysqld --character-set-server=utf8 --collation-server=utf8_unicode_ci --init-connect='SET NAMES UTF8;' --innodb-flush-log-at-trx-commit=0 --max-allowed-packet=256M
+
+volumes:
+    db_data:
