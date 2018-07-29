@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 
+"""Tests for enrichment methods."""
+
 import logging
 import unittest
+from pybel import BELGraph
+from pybel.constants import EQUIVALENT_TO, ORTHOLOGOUS, RELATION, TRANSCRIBED_TO, TRANSLATED_TO, unqualified_edge_code
+from pybel.dsl import gene, mirna, protein, rna
 
 from bio2bel_hgnc.constants import GENE_FAMILY_KEYWORD
 from bio2bel_hgnc.enrich import (
     add_node_orthologies, get_node,
 )
-from pybel import BELGraph
-from pybel.constants import EQUIVALENT_TO, ORTHOLOGOUS, RELATION, TRANSCRIBED_TO, TRANSLATED_TO, unqualified_edge_code
-from pybel.dsl import gene, mirna, protein, rna
 from tests.cases import TemporaryCacheMixin
 
 log = logging.getLogger(__name__)
@@ -33,6 +35,7 @@ class TestEnrich(TemporaryCacheMixin):
         self.assertEqual('CD33 molecule', model.name)
 
     def test_pyhgnc_loaded(self):
+        """"Test that data has been loaded properly."""
         cd33_results = self.manager.hgnc(symbol='CD33')
         self.assertIsNotNone(cd33_results)
 
@@ -42,6 +45,7 @@ class TestEnrich(TemporaryCacheMixin):
         self.help_check_cd33_model(cd33_model)
 
     def test_get_hgnc_node(self):
+        """Test getting a node by name from the database."""
         graph = BELGraph()
 
         cd33_tuple = graph.add_node_from_data(protein(name='CD33', namespace='HGNC'))
@@ -50,6 +54,7 @@ class TestEnrich(TemporaryCacheMixin):
         self.help_check_cd33_model(cd33_model)
 
     def test_get_hgnc_id_node(self):
+        """Test getting a node by identifier from the database."""
         graph = BELGraph()
 
         cd33_tuple = graph.add_node_from_data(protein(identifier='1659', namespace='HGNC'))
@@ -59,6 +64,7 @@ class TestEnrich(TemporaryCacheMixin):
 
     @unittest.skip('HGNC does not have RGD symbols')
     def test_get_rgd_node(self):
+        """Test getting a node by RGD name."""
         graph = BELGraph()
 
         # CD33's MGI counterpart's identifier
@@ -68,6 +74,7 @@ class TestEnrich(TemporaryCacheMixin):
         self.help_check_cd33_model(cd33_model)
 
     def test_get_rgd_id_node(self):
+        """Test getting a node by RGD identifier."""
         graph = BELGraph()
 
         # CD33's RGD counterpart's identifier
@@ -78,6 +85,7 @@ class TestEnrich(TemporaryCacheMixin):
 
     @unittest.skip('HGNC does not have MGI symbol information')
     def test_get_mgi_node(self):
+        """Test getting a node by MGI name."""
         graph = BELGraph()
 
         # CD33's MGI counterpart's identifier
@@ -87,6 +95,7 @@ class TestEnrich(TemporaryCacheMixin):
         self.help_check_cd33_model(cd33_model)
 
     def test_get_mgi_id_node(self):
+        """Test getting a node by MGI identifier."""
         graph = BELGraph()
 
         # CD33's MGI counterpart's identifier
@@ -96,6 +105,7 @@ class TestEnrich(TemporaryCacheMixin):
         self.help_check_cd33_model(cd33_model)
 
     def test_get_entrez_node(self):
+        """Test getting a node by Entrez Gene identifier."""
         graph = BELGraph()
 
         # CD33's MGI counterpart's identifier
@@ -109,10 +119,10 @@ class TestEnrich(TemporaryCacheMixin):
         graph = BELGraph()
 
         cd33_hgnc = gene(name='CD33', namespace='HGNC')
-        cd33_eg = gene(name='CD33', identifier='945', namespace='ENTREZ')
+        cd33_eg = gene(identifier='945', namespace='ENTREZ')
 
-        graph.add_node_from_data(cd33_hgnc)
-        graph.add_node_from_data(cd33_eg)
+        cd33_hgnc_tuple = graph.add_node_from_data(cd33_hgnc)
+        cd33_eg_tuple = graph.add_node_from_data(cd33_eg)
 
         # self.assertEqual(2, graph.number_of_nodes(), msg='wrong initial number of nodes')
         # self.assertEqual(0, graph.number_of_edges(), msg='wrong initial number of edges')
@@ -122,19 +132,19 @@ class TestEnrich(TemporaryCacheMixin):
         # self.assertEqual(2, graph.number_of_nodes(), msg='nodes: {}'.format(list(graph)))
         # self.assertEqual(2, graph.number_of_edges(), msg='adding equivalence added wrong number of edges')
 
-        self.assertIn(cd33_eg.as_tuple(), graph[cd33_hgnc.as_tuple()])
-        v = list(graph[cd33_hgnc.as_tuple()][cd33_eg.as_tuple()].values())[0]
+        self.assertIn(cd33_eg_tuple, graph[cd33_hgnc_tuple])
+        v = list(graph[cd33_hgnc_tuple][cd33_eg_tuple].values())[0]
         self.assertIn(RELATION, v)
         self.assertEqual(EQUIVALENT_TO, v[RELATION])
 
-        self.assertIn(cd33_hgnc.as_tuple(), graph.edge[cd33_eg.as_tuple()])
-        v = list(graph[cd33_eg.as_tuple()][cd33_hgnc.as_tuple()].values())[0]
+        self.assertIn(cd33_hgnc_tuple, graph.edge[cd33_eg_tuple])
+        v = list(graph[cd33_eg_tuple][cd33_hgnc_tuple].values())[0]
         self.assertIn(RELATION, v)
         self.assertEqual(EQUIVALENT_TO, v[RELATION])
 
     @unittest.skip(reason='Not implemented yet!')
     def test_add_orthology(self):
-        """Tests adding orthologies when both nodes are identified by name"""
+        """Test adding orthologies when both nodes are identified by name."""
         graph = BELGraph()
 
         cd33_hgnc = protein(name='CD33', namespace='HGNC')
@@ -163,7 +173,7 @@ class TestEnrich(TemporaryCacheMixin):
 
     @unittest.skip(reason='Not implemented yet!')
     def test_add_orthology_target_has_id(self):
-        """Tests adding orthologies when the target is identified by its database identiier"""
+        """Test adding orthologies when the target is identified by its database identifier."""
         graph = BELGraph()
 
         cd33_hgnc = protein(name='CD33', namespace='HGNC')
@@ -192,6 +202,7 @@ class TestEnrich(TemporaryCacheMixin):
 
     @unittest.skip('needs serious reinvestigation')
     def test_add_mirna(self):
+        """Test inferring the central dogma for an miRNA."""
         graph = BELGraph()
         mir489_gene = gene(namespace='HGNC', name='MIR489', identifier='32074')
         graph.add_node_from_data(mir489_gene)
@@ -214,6 +225,7 @@ class TestEnrich(TemporaryCacheMixin):
 
     @unittest.skip('need to reinvestigate assignment of RNA')
     def test_add_rna(self):
+        """Test inferring the central dogma for an RNA."""
         graph = BELGraph()
         mir503hg_gene = gene(namespace='HGNC', name='MIR503HG', identifier='28258')
         graph.add_node_from_data(mir503hg_gene)
@@ -236,6 +248,7 @@ class TestEnrich(TemporaryCacheMixin):
         self.assertFalse(graph.has_node_with_data(mir503hg_protein))
 
     def test_add_protein(self):
+        """Test inferring the central dogma for a protein."""
         graph = BELGraph()
         cd33_gene = gene(name='CD33', namespace='HGNC')
         graph.add_node_from_data(cd33_gene)
@@ -263,7 +276,7 @@ class TestEnrich(TemporaryCacheMixin):
         self.assertIn(translate_code, graph.edge[cd33_rna.as_tuple()][cd33_protein.as_tuple()])
 
     def test_enrich_genes_with_families(self):
-        """For genes, adds their corresponding families"""
+        """Tests enriching genes with their families."""
         graph = BELGraph()
         cd33_gene = gene(name='CD33', namespace='HGNC')
         graph.add_node_from_data(cd33_gene)
@@ -282,7 +295,7 @@ class TestEnrich(TemporaryCacheMixin):
             self.assertIn(g.as_tuple(), graph.edge[cd33_gene.as_tuple()])
 
     def test_enrich_family_with_genes(self):
-        """Test enrichment of genes members on gene families."""
+        """Test enriching families with their genes."""
         graph = BELGraph()
         f = gene(name="CD molecules", namespace=GENE_FAMILY_KEYWORD)
         graph.add_node_from_data(f)
