@@ -5,7 +5,7 @@
 from .manager import Manager
 from .utils import get_version
 
-__version__ = '0.1.0-dev'
+__version__ = '0.1.0'
 
 __title__ = 'bio2bel_hgnc'
 __description__ = "A package for converting HGNC to BEL"
