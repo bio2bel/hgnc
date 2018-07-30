@@ -27,11 +27,10 @@ matrix:
       - env: TOXENV=flake8
       - env: TOXENV=pylint
 install:
-- pip install tox codecov coverage
+  - sh -c 'if [ "$TOXENV" = "py" ]; then pip install tox codecov; else pip install tox; fi'
 script:
-- tox
+  - tox
 after_success:
-- tox -e coverage-report
-- codecov
+  - sh -c 'if [ "$TOXENV" = "py" ]; then tox -e coverage-report; codecov; fi'
 notifications:
   slack: pybel:n2KbWKBum3musnBg3L76gGwq
