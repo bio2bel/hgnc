@@ -12,14 +12,17 @@ PACKAGES = setuptools.find_packages(where='src')
 META_PATH = os.path.join('src', 'bio2bel_hgnc', '__init__.py')
 INSTALL_REQUIRES = [
     'pybel>=0.11.10',
-    'bio2bel>=0.1.0',
+    'bio2bel>=0.1.1',
     'tqdm',
     'sqlalchemy',
     'click',
     'pyhgnc',
 ]
 EXTRAS_REQUIRE = {
-    'web': ['flask', 'flask_admin'],
+    'web': [
+        'flask',
+        'flask_admin',
+    ],
 }
 ENTRY_POINTS = {
     'bio2bel': [
