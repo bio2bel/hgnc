@@ -7,6 +7,7 @@ import logging
 from bio2bel import AbstractManager
 from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
 from pybel.manager.models import NamespaceEntry
+
 from .models import Base, GeneFamily
 from .wrapper import BaseManager
 
@@ -50,6 +51,14 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, BaseManager):
 
     def _get_identifier(self, gene_family):
         return gene_family.family_identifier
+
+    def add_namespace_to_graph(self, graph):
+        """Add this manager's namespace to the graph.
+
+        :param pybel.BELGraph graph:
+        """
+        namespace = self.upload_bel_namespace()
+        graph.namespace_url[namespace.keyword] = namespace.url
 
     def summarize(self):
         return dict(families=self._count_model(GeneFamily))
