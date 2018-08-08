@@ -51,6 +51,9 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, BaseManager):
     def _get_identifier(self, gene_family):
         return gene_family.family_identifier
 
+    def summarize(self):
+        return dict(families=self._count_model(GeneFamily))
+
 
 main = Manager.get_cli()
 
