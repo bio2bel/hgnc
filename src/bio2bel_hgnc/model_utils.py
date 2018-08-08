@@ -4,6 +4,7 @@
 
 from pybel.constants import MIRNA, PROTEIN, RNA
 from pybel.dsl import gene as gene_dsl, mirna as mirna_dsl, protein as protein_dsl, rna as rna_dsl
+from pybel.dsl.nodes import CentralDogma
 
 from .constants import encodings
 
@@ -17,27 +18,28 @@ __all__ = [
 ]
 
 
-def gene_to_bel(gene, func=None):
+def gene_to_bel(human_gene, func=None, variants=None) -> CentralDogma:
     """Convert a Gene to a PyBEL gene.
 
-    :param bio2bel_hgnc.models.HumanGene gene:  A Gene model
+    :param bio2bel_hgnc.models.HumanGene human_gene:  A Gene model
     :rtype: pybel.dsl.gene
     """
     if func == PROTEIN:
-        return gene_to_protein_to_bel(gene)
+        return gene_to_protein_to_bel(human_gene)
     elif func == RNA:
-        return gene_to_rna_to_bel(gene)
+        return gene_to_rna_to_bel(human_gene)
     elif func == MIRNA:
-        return gene_to_mirna_to_bel(gene)
+        return gene_to_mirna_to_bel(human_gene)
 
     return gene_dsl(
         namespace='hgnc',
-        name=str(gene.symbol),
-        identifier=str(gene.identifier)
+        name=str(human_gene.symbol),
+        identifier=str(human_gene.identifier),
+        variants=variants,
     )
 
 
-def gene_to_rna_to_bel(gene):
+def gene_to_rna_to_bel(gene) -> rna_dsl:
     """Converts a Gene to a PyBEL gene
 
     :param bio2bel_hgnc.models.HumanGene gene:  A Gene model

@@ -4,7 +4,7 @@
 
 import logging
 from collections import Counter
-from typing import Iterable, Optional, Tuple
+from typing import Iterable, Optional, Tuple, Dict
 
 import click
 import networkx as nx
@@ -13,7 +13,7 @@ from bio2bel.manager.bel_manager import BELManagerMixin
 from bio2bel.manager.flask_manager import FlaskMixin
 from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
 from pybel import BELGraph
-from pybel.constants import FUNCTION, GENE, IDENTIFIER, MIRNA, NAME, NAMESPACE, PROTEIN, RNA
+from pybel.constants import FUNCTION, GENE, IDENTIFIER, MIRNA, NAME, NAMESPACE, PROTEIN, RNA, VARIANTS
 from pybel.dsl import gene as gene_dsl, mirna as mirna_dsl, protein as protein_dsl, rna as rna_dsl
 from pybel.dsl.nodes import BaseEntity
 from pybel.manager.models import NamespaceEntry
@@ -280,7 +280,7 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
             if human_gene is not None:
                 yield node_tuple, node_data, human_gene
 
-    def normalize_genes(self, graph):
+    def normalize_genes(self, graph) -> None:
         """Add identifiers to all HGNC genes.
 
         :param pybel.BELGraph graph: The BEL graph to enrich
@@ -288,15 +288,20 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         mapping = {}
 
         for node_tuple, node_data, human_gene in self._iter_genes(graph):
-            dsl = gene_to_bel(human_gene, node_data[FUNCTION])
+            dsl = gene_to_bel(human_gene, func=node_data[FUNCTION], variants=node_data.get(VARIANTS))
             graph.node[node_tuple] = dsl
             mapping[node_tuple] = dsl.as_tuple()
 
         nx.relabel_nodes(graph, mapping, copy=False)
 
-    def enrich_genes_with_equivalences(self, graph):
+    def enrich_genes_with_equivalences(self, graph: BELGraph) -> None:
         """Enrich genes with their corresponding UniProt."""
         self.add_namespace_to_graph(graph)
+
+        if 'uniprot' not in graph.namespace_url:
+            graph.namespace_pattern[
+                'uniprot'] = '^([A-N,R-Z][0-9]([A-Z][A-Z, 0-9][A-Z, 0-9][0-9]){1,2})|([O,P,Q][0-9][A-Z, 0-9][A-Z, 0-9][A-Z, 0-9][0-9])(\.\d+)?$'
+
         for node_tuple, node_data, human_gene in self._iter_genes(graph):
             func = node_data[FUNCTION]
 
@@ -319,30 +324,25 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
                     )
                     graph.add_equivalence(node_tuple, mirbase_rna_node)
 
-    def enrich_genes_with_families(self, graph):
-        """Enrich genes in the BEL graph with their families.
-
-        :param pybel.BELGraph graph: The BEL graph to enrich
-        """
+    def enrich_genes_with_families(self, graph: BELGraph) -> None:
+        """Enrich genes in the BEL graph with their families."""
         self.add_namespace_to_graph(graph)
         for node_tuple, node_data, human_gene in self._iter_genes(graph):
             for family in human_gene.gene_families:
                 graph.add_is_a(node_tuple, family_to_bel(family, node_data[FUNCTION]))
 
-    def get_family_by_id(self, family_identifier):
-        """Get a gene family by its HGNC identifier.
+    def get_family_by_id(self, family_identifier: str) -> Optional[GeneFamily]:
+        """Get a gene family by its hgnc.genefamily identifier.
 
-        :param str family_identifier: The identifier of a HGNC Gene Family
-        :rtype: Optional[bio2bel_hgnc.models.GeneFamily]
+        :param family_identifier: The identifier of a HGNC Gene Family
         """
         results = self.gene_family(family_identifier=family_identifier)
         return _deal_with_nonsense(results)
 
-    def get_family_by_name(self, family_name):
+    def get_family_by_name(self, family_name: str) -> Optional[GeneFamily]:
         """Get a gene family by its name.
 
-        :param str family_name: The name of a HGNC Gene Family
-        :rtype: Optional[bio2bel_hgnc.models.GeneFamily]
+        :param family_name: The name of a HGNC Gene Family
         """
         results = self.gene_family(family_name=family_name)
         return _deal_with_nonsense(results)
@@ -412,35 +412,26 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
 
     """ Mapping dictionaries"""
 
-    def _get_identifier(self, human_gene):
+    def _get_identifier(self, human_gene: HumanGene) -> str:
         """Get the identifier from a human gene SQLAlchemy model.
 
         :rtype: str
         """
-        return human_gene.identifier
+        return str(human_gene.identifier)
 
-    def build_entrez_id_symbol_mapping(self):
-        """Build a mapping from Entrez gene identifier to HGNC gene symbols.
-
-        :rtype: dict[str,str]
-        """
-        return {
-            identifier: symbol
-            for identifier, symbol in self.session.query(HumanGene.entrez, HumanGene.symbol).all()
-        }
+    def build_entrez_id_symbol_mapping(self) -> Dict[str,str]:
+        """Build a mapping from Entrez gene identifier to HGNC gene symbols."""
+        return dict(self.session.query(HumanGene.entrez, HumanGene.symbol).all())
 
     @property
-    def hgnc_symbol_entrez_id_mapping(self):
-        """A mapping from Entrez gene identifiers to HGNC gene symbols.
-
-        :rtype: dict[str,str]
-        """
+    def hgnc_symbol_entrez_id_mapping(self)-> Dict[str,str]:
+        """Get a mapping from Entrez gene identifiers to HGNC gene symbols."""
         if not self._hgnc_symbol_entrez_id_mapping:
             self._hgnc_symbol_entrez_id_mapping = self.build_hgnc_symbol_entrez_id_mapping()
 
         return self._hgnc_symbol_entrez_id_mapping
 
-    def build_hgnc_symbol_entrez_id_mapping(self):
+    def build_hgnc_symbol_entrez_id_mapping(self)-> Dict[str,str]:
         """Build a mapping from HGNC symbol to ENTREZ identifier.
 
         :rtype: dict[str,str]
@@ -605,6 +596,10 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         :param graph:
         :param node:
         """
+        data = graph.node[node]
+        if VARIANTS in data:
+            return
+
         human_gene = self.get_node(graph, node)
         encoding = encodings.get(human_gene.locus_type, 'GRP')
 
