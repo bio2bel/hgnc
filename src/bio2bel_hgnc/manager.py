@@ -4,14 +4,10 @@
 
 import logging
 from collections import Counter
-from typing import Iterable, Optional, Tuple, Dict
+from typing import Dict, Iterable, Optional, Tuple
 
 import click
 import networkx as nx
-from bio2bel import AbstractManager
-from bio2bel.manager.bel_manager import BELManagerMixin
-from bio2bel.manager.flask_manager import FlaskMixin
-from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
 from pybel import BELGraph
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, MIRNA, NAME, NAMESPACE, PROTEIN, RNA, VARIANTS
 from pybel.dsl import gene as gene_dsl, mirna as mirna_dsl, protein as protein_dsl, rna as rna_dsl
@@ -19,11 +15,14 @@ from pybel.dsl.nodes import BaseEntity
 from pybel.manager.models import NamespaceEntry
 from tqdm import tqdm
 
+from bio2bel import AbstractManager
+from bio2bel.manager.bel_manager import BELManagerMixin
+from bio2bel.manager.flask_manager import FlaskMixin
+from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
 from .constants import MODULE_NAME, encodings
 from .gfam_manager import Manager as GfamManager
 from .model_utils import (
-    add_central_dogma, family_to_bel, gene_to_bel, gene_to_mirna_to_bel, gene_to_protein_to_bel, gene_to_rna_to_bel,
-    uniprot_to_bel,
+    add_central_dogma, family_to_bel, gene_to_bel, uniprot_to_bel,
 )
 from .models import Base, GeneFamily, HumanGene, MouseGene, RatGene, UniProt
 from .wrapper import BaseManager
@@ -419,19 +418,19 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         """
         return str(human_gene.identifier)
 
-    def build_entrez_id_symbol_mapping(self) -> Dict[str,str]:
+    def build_entrez_id_symbol_mapping(self) -> Dict[str, str]:
         """Build a mapping from Entrez gene identifier to HGNC gene symbols."""
         return dict(self.session.query(HumanGene.entrez, HumanGene.symbol).all())
 
     @property
-    def hgnc_symbol_entrez_id_mapping(self)-> Dict[str,str]:
+    def hgnc_symbol_entrez_id_mapping(self) -> Dict[str, str]:
         """Get a mapping from Entrez gene identifiers to HGNC gene symbols."""
         if not self._hgnc_symbol_entrez_id_mapping:
             self._hgnc_symbol_entrez_id_mapping = self.build_hgnc_symbol_entrez_id_mapping()
 
         return self._hgnc_symbol_entrez_id_mapping
 
-    def build_hgnc_symbol_entrez_id_mapping(self)-> Dict[str,str]:
+    def build_hgnc_symbol_entrez_id_mapping(self) -> Dict[str, str]:
         """Build a mapping from HGNC symbol to ENTREZ identifier.
 
         :rtype: dict[str,str]
@@ -604,20 +603,20 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         encoding = encodings.get(human_gene.locus_type, 'GRP')
 
         if 'M' in encoding:
-            rna = gene_to_mirna_to_bel(human_gene)
-            graph.add_transcription(gene_to_bel(human_gene), rna)
-            return rna
+            mirna = gene_to_bel(human_gene, func=MIRNA)
+            graph.add_transcription(gene_to_bel(human_gene), mirna)
+            return mirna
 
         if 'R' not in encoding:
             return
 
-        rna = gene_to_rna_to_bel(human_gene)
+        rna = gene_to_bel(human_gene, func=RNA)
         graph.add_transcription(gene_to_bel(human_gene), rna)
 
         if 'P' not in encoding:
             return rna
         else:
-            protein = gene_to_protein_to_bel(human_gene)
+            protein = gene_to_bel(human_gene, func=PROTEIN)
             graph.add_translation(rna, protein)
             return protein
 
