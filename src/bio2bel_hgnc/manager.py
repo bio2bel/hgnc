@@ -179,8 +179,7 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         :param str uniprot_id: The UniProt gene identifier
         :rtype: Optional[bio2bel_hgnc.models.HumanGene]
         """
-        results = self.hgnc(uniprotid=uniprot_id)
-        return _deal_with_nonsense(results)
+        return self.hgnc(uniprotid=uniprot_id)
 
     def get_gene_by_mgi_id(self, mgi_id):
         """Get a human gene by an orthologous MGI identifier.
