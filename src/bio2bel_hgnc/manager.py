@@ -8,6 +8,10 @@ from typing import Dict, Iterable, Optional, Tuple
 
 import click
 import networkx as nx
+from bio2bel import AbstractManager
+from bio2bel.manager.bel_manager import BELManagerMixin
+from bio2bel.manager.flask_manager import FlaskMixin
+from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
 from pybel import BELGraph
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, MIRNA, NAME, NAMESPACE, PROTEIN, RNA, VARIANTS
 from pybel.dsl import gene as gene_dsl, mirna as mirna_dsl, protein as protein_dsl, rna as rna_dsl
@@ -15,10 +19,6 @@ from pybel.dsl.nodes import BaseEntity
 from pybel.manager.models import NamespaceEntry
 from tqdm import tqdm
 
-from bio2bel import AbstractManager
-from bio2bel.manager.bel_manager import BELManagerMixin
-from bio2bel.manager.flask_manager import FlaskMixin
-from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
 from .constants import MODULE_NAME, encodings
 from .gfam_manager import Manager as GfamManager
 from .model_utils import (
@@ -162,6 +162,24 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         :rtype: Optional[bio2bel_hgnc.models.HumanGene]
         """
         results = self.hgnc(entrez=entrez_id)
+        return _deal_with_nonsense(results)
+
+    def get_gene_by_ensembl_id(self, ensembl_id):
+        """Get a human gene by its ENSEMBL gene identifier.
+
+        :param str ensembl_id: The ENSEMBL gene identifier
+        :rtype: Optional[bio2bel_hgnc.models.HumanGene]
+        """
+        results = self.hgnc(ensembl_gene=ensembl_id)
+        return _deal_with_nonsense(results)
+
+    def get_gene_by_uniprot_id(self, uniprot_id):
+        """Get a human gene by its UniProt gene identifier.
+
+        :param str uniprot_id: The UniProt gene identifier
+        :rtype: Optional[bio2bel_hgnc.models.HumanGene]
+        """
+        results = self.hgnc(uniprotid=uniprot_id)
         return _deal_with_nonsense(results)
 
     def get_gene_by_mgi_id(self, mgi_id):
