@@ -5,7 +5,7 @@
 import logging
 import unittest
 from pybel import BELGraph
-from pybel.constants import EQUIVALENT_TO, ORTHOLOGOUS, RELATION, TRANSCRIBED_TO, TRANSLATED_TO, unqualified_edge_code
+from pybel.constants import EQUIVALENT_TO, ORTHOLOGOUS, RELATION, TRANSCRIBED_TO, TRANSLATED_TO
 from pybel.dsl import gene, mirna, protein, rna
 
 from bio2bel_hgnc.constants import GENE_FAMILY_KEYWORD
@@ -15,10 +15,6 @@ from bio2bel_hgnc.enrich import (
 from tests.cases import TemporaryCacheMixin
 
 log = logging.getLogger(__name__)
-
-translate_code = unqualified_edge_code[TRANSLATED_TO]
-transcribe_code = unqualified_edge_code[TRANSCRIBED_TO]
-equivalence_code = unqualified_edge_code[EQUIVALENT_TO]
 
 
 class TestEnrich(TemporaryCacheMixin):
@@ -217,11 +213,11 @@ class TestEnrich(TemporaryCacheMixin):
         self.assertEqual(1, graph.number_of_edges())
 
         mir489_mirna = mirna(namespace='HGNC', name='MIR489', identifier='32074')
-        self.assertTrue(graph.has_node_with_data(mir489_mirna))
+        self.assertIn(mir489_mirna, graph)
 
         # Check doesn't add protein
         mir489_protein = mirna(namespace='HGNC', name='MIR489', identifier='32074')
-        self.assertFalse(graph.has_node_with_data(mir489_protein))
+        self.assertNotIn(mir489_protein, graph)
 
     @unittest.skip('need to reinvestigate assignment of RNA')
     def test_add_rna(self):

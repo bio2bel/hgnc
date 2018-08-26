@@ -11,7 +11,7 @@ import setuptools
 PACKAGES = setuptools.find_packages(where='src')
 META_PATH = os.path.join('src', 'bio2bel_hgnc', '__init__.py')
 INSTALL_REQUIRES = [
-    'pybel>=0.11.10',
+    'pybel>=0.12.0<0.13.0',
     'bio2bel>=0.1.1',
     'tqdm',
     'sqlalchemy',
