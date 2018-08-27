@@ -24,7 +24,7 @@ from .gfam_manager import Manager as GfamManager
 from .model_utils import (
     add_central_dogma, family_to_bel, gene_to_bel, uniprot_to_bel,
 )
-from .models import Base, GeneFamily, HumanGene, MouseGene, RatGene, UniProt
+from .models import Base, GeneFamily, HumanGene, MouseGene, RatGene, UniProt, AliasName, AliasSymbol
 from .wrapper import BaseManager
 
 log = logging.getLogger(__name__)
@@ -67,7 +67,7 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
     identifiers_namespace = 'hgnc'
     identifiers_url = 'http://identifiers.org/hgnc/'
 
-    flask_admin_models = [HumanGene, GeneFamily, UniProt, MouseGene, RatGene]
+    flask_admin_models = [HumanGene, GeneFamily, UniProt, MouseGene, RatGene, AliasName, AliasSymbol]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -290,11 +290,11 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         gfam_manager = GfamManager(engine=self.engine, session=self.session)
         gfam_manager.add_namespace_to_graph(graph)
 
-    def _iter_genes(self, graph) -> Iterable[Tuple[tuple, dict, HumanGene]]:
+    def _iter_genes(self, graph) -> Iterable[Tuple[BaseEntity, HumanGene]]:
         for node_tuple, node_data in graph.nodes(data=True):
             human_gene = self.get_node(graph, node_tuple)
             if human_gene is not None:
-                yield node_tuple, node_data, human_gene
+                yield node_data, human_gene
 
     def normalize_genes(self, graph) -> None:
         """Add identifiers to all HGNC genes.
@@ -303,10 +303,13 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         """
         mapping = {}
 
-        for node_tuple, node_data, human_gene in self._iter_genes(graph):
+        for node_data, human_gene in self._iter_genes(graph):
+            node_tuple = node_data.as_tuple()
             dsl = gene_to_bel(human_gene, func=node_data[FUNCTION], variants=node_data.get(VARIANTS))
             graph.node[node_tuple] = dsl
             mapping[node_tuple] = dsl.as_tuple()
+
+        # FIXME what about when an HGNC node appears in a fusion, complex, or composite?
 
         nx.relabel_nodes(graph, mapping, copy=False)
 
@@ -318,11 +321,11 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
             graph.namespace_pattern[
                 'uniprot'] = '^([A-N,R-Z][0-9]([A-Z][A-Z, 0-9][A-Z, 0-9][0-9]){1,2})|([O,P,Q][0-9][A-Z, 0-9][A-Z, 0-9][A-Z, 0-9][0-9])(\.\d+)?$'
 
-        for node_tuple, node_data, human_gene in self._iter_genes(graph):
+        for node_data, human_gene in self._iter_genes(graph):
             func = node_data[FUNCTION]
 
             if human_gene.entrez:
-                graph.add_equivalence(node_tuple, _func_to_dsl[func](
+                graph.add_equivalence(node_data, _func_to_dsl[func](
                     namespace='ncbigene',
                     name=human_gene.symbol,
                     identifier=str(human_gene.entrez)
@@ -330,7 +333,7 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
 
             if func in {PROTEIN, RNA, GENE}:
                 for uniprot in human_gene.uniprots:
-                    graph.add_equivalence(node_tuple, uniprot_to_bel(uniprot))
+                    graph.add_equivalence(node_data, uniprot_to_bel(uniprot))
 
             if func in {RNA, GENE}:
                 if human_gene.mirbase:
@@ -338,14 +341,14 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
                         namespace='mirbase',
                         identifier=str(human_gene.mirbase)
                     )
-                    graph.add_equivalence(node_tuple, mirbase_rna_node)
+                    graph.add_equivalence(node_data, mirbase_rna_node)
 
     def enrich_genes_with_families(self, graph: BELGraph) -> None:
         """Enrich genes in the BEL graph with their families."""
         self.add_namespace_to_graph(graph)
-        for node_tuple, node_data, human_gene in self._iter_genes(graph):
+        for node_data, human_gene in self._iter_genes(graph):
             for family in human_gene.gene_families:
-                graph.add_is_a(node_tuple, family_to_bel(family, node_data[FUNCTION]))
+                graph.add_is_a(node_data, family_to_bel(family, node_data[FUNCTION]))
 
     def get_family_by_id(self, family_identifier: str) -> Optional[GeneFamily]:
         """Get a gene family by its hgnc.genefamily identifier.
@@ -375,7 +378,7 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
 
         namespace = data.get(NAMESPACE)
 
-        if namespace != 'HGNC':
+        if namespace.lower() != 'hgnc':
             return
 
         func = data[FUNCTION]
