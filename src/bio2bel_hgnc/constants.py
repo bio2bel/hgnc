@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Enrichment functions for BEL graphs"""
+"""Enrichment functions for BEL graphs."""
 
 from bio2bel.utils import get_data_dir
 
@@ -31,21 +31,19 @@ encodings = {
     # phenotype
     'phenotype only': 'G',
     # pseudogene
-    'T cell receptor pseudogene': 'G',
-    'immunoglobulin pseudogene': 'G',
+    'T cell receptor pseudogene': 'GRP',
+    'immunoglobulin pseudogene': 'GRP',
+    'immunoglobulin gene': 'GRP',
     'pseudogene': 'G',
     # other
-    'T-cell receptor pseudogene': 'G',
-    'T-cell receptor gene': 'G',
     'T cell receptor gene': 'G',
     'complex locus constituent': 'G',
     'endogenous retrovirus': 'G',
     'fragile site': 'G',
-    'immunoglobulin gene': 'G',
     'protocadherin': 'G',
     'readthrough': 'G',
     'region': 'G',
     'transposable element': 'G',
-    'unknown': 'GRP',
     'virus integration site': 'G',
+    'unknown': 'GRP',
 }
