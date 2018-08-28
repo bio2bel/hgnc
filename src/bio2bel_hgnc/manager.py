@@ -7,24 +7,21 @@ from collections import Counter
 from typing import Dict, Iterable, Optional, Tuple
 
 import click
-import networkx as nx
+from tqdm import tqdm
+
 from bio2bel import AbstractManager
 from bio2bel.manager.bel_manager import BELManagerMixin
 from bio2bel.manager.flask_manager import FlaskMixin
 from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
 from pybel import BELGraph
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, MIRNA, NAME, NAMESPACE, PROTEIN, RNA, VARIANTS
-from pybel.dsl import gene as gene_dsl, mirna as mirna_dsl, protein as protein_dsl, rna as rna_dsl
-from pybel.dsl.nodes import BaseEntity
+from pybel.dsl import BaseEntity, FUNC_TO_DSL, rna as rna_dsl
 from pybel.manager.models import NamespaceEntry
-from tqdm import tqdm
-
+from pybel.struct.utils import relabel_inplace
 from .constants import MODULE_NAME, encodings
 from .gfam_manager import Manager as GfamManager
-from .model_utils import (
-    add_central_dogma, family_to_bel, gene_to_bel, uniprot_to_bel,
-)
-from .models import Base, GeneFamily, HumanGene, MouseGene, RatGene, UniProt, AliasName, AliasSymbol
+from .model_utils import add_central_dogma, family_to_bel, gene_to_bel, uniprot_to_bel
+from .models import AliasName, AliasSymbol, Base, GeneFamily, HumanGene, MouseGene, RatGene, UniProt
 from .wrapper import BaseManager
 
 log = logging.getLogger(__name__)
@@ -33,12 +30,7 @@ __all__ = [
     'Manager',
 ]
 
-_func_to_dsl = {
-    GENE: gene_dsl,
-    RNA: rna_dsl,
-    PROTEIN: protein_dsl,
-    MIRNA: mirna_dsl,
-}
+UNIPROT_RE = r'^([A-N,R-Z][0-9]([A-Z][A-Z, 0-9][A-Z, 0-9][0-9]){1,2})|([O,P,Q][0-9][A-Z, 0-9][A-Z, 0-9][A-Z, 0-9][0-9])(\.\d+)?$'
 
 
 def _deal_with_nonsense(results):
@@ -221,25 +213,18 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
 
         return human_genes[0]
 
-    def get_node(self, graph, node) -> Optional[HumanGene]:
+    def get_node(self, node: BaseEntity) -> Optional[HumanGene]:
         """Get a node from the database, whether it has a HGNC, RGD, MGI, or EG identifier.
 
-        :param pybel.BELGraph graph: A BEL graph
-        :param node: A PyBEL node tuple
-        :type node: tuple or BaseEntity
+        :param node: The node to look for
         :raises: KeyError
         """
-        if isinstance(node, BaseEntity):
-            data = node
-        else:
-            data = graph.node[node]
-
-        if NAMESPACE not in data:
+        if NAMESPACE not in node:
             return
 
-        namespace = data[NAMESPACE]
-        identifer = data.get(IDENTIFIER)
-        name = data.get(NAME)
+        namespace = node[NAMESPACE]
+        identifer = node.get(IDENTIFIER)
+        name = node.get(NAME)
 
         if namespace.lower() == 'hgnc':
             if identifer is not None:
@@ -279,39 +264,42 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
                 raise KeyError
             return self.get_gene_by_rgd_id(name)
 
-    def add_namespace_to_graph(self, graph):
-        """Add this manager's namespace to the graph.
-
-        :param pybel.BELGraph graph:
-        """
+    def add_namespace_to_graph(self, graph: BELGraph):
+        """Add this manager's namespace to the graph."""
         namespace = self.upload_bel_namespace()
         graph.namespace_url[namespace.keyword] = namespace.url
 
         gfam_manager = GfamManager(engine=self.engine, session=self.session)
         gfam_manager.add_namespace_to_graph(graph)
 
-    def _iter_genes(self, graph) -> Iterable[Tuple[BaseEntity, HumanGene]]:
-        for node_tuple, node_data in graph.nodes(data=True):
-            human_gene = self.get_node(graph, node_tuple)
+    def iter_genes(self, graph: BELGraph) -> Iterable[Tuple[BaseEntity, HumanGene]]:
+        """Iterate over pairs of BEL nodes and HGNC genes."""
+        for _, node in list(graph.nodes(data=True)):
+            human_gene = self.get_node(node)
             if human_gene is not None:
-                yield node_data, human_gene
+                yield node, human_gene
 
-    def normalize_genes(self, graph) -> None:
-        """Add identifiers to all HGNC genes.
+    def normalize_genes(self, graph: BELGraph) -> None:
+        """Add identifiers to all HGNC genes."""
 
-        :param pybel.BELGraph graph: The BEL graph to enrich
-        """
+        for _, data in graph.nodes(data=True):
+            assert isinstance(data, BaseEntity), f'start issue {data}'
+
         mapping = {}
 
-        for node_data, human_gene in self._iter_genes(graph):
+        for node_data, human_gene in self.iter_genes(graph):
+            new_node_data = gene_to_bel(human_gene, func=node_data.function, variants=node_data.get(VARIANTS))
+
             node_tuple = node_data.as_tuple()
-            dsl = gene_to_bel(human_gene, func=node_data[FUNCTION], variants=node_data.get(VARIANTS))
-            graph.node[node_tuple] = dsl
-            mapping[node_tuple] = dsl.as_tuple()
+            graph._node[node_tuple] = new_node_data
+            mapping[node_tuple] = new_node_data.as_tuple()
 
         # FIXME what about when an HGNC node appears in a fusion, complex, or composite?
 
-        nx.relabel_nodes(graph, mapping, copy=False)
+        relabel_inplace(graph, mapping)
+
+        for _, data in graph.nodes(data=True):
+            assert isinstance(data, BaseEntity), f'end issue {data}'
 
     def enrich_genes_with_equivalences(self, graph: BELGraph) -> None:
         """Enrich genes with their corresponding UniProt."""
@@ -321,11 +309,11 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
             graph.namespace_pattern[
                 'uniprot'] = '^([A-N,R-Z][0-9]([A-Z][A-Z, 0-9][A-Z, 0-9][0-9]){1,2})|([O,P,Q][0-9][A-Z, 0-9][A-Z, 0-9][A-Z, 0-9][0-9])(\.\d+)?$'
 
-        for node_data, human_gene in self._iter_genes(graph):
+        for node_data, human_gene in self.iter_genes(graph):
             func = node_data[FUNCTION]
 
             if human_gene.entrez:
-                graph.add_equivalence(node_data, _func_to_dsl[func](
+                graph.add_equivalence(node_data, FUNC_TO_DSL[func](
                     namespace='ncbigene',
                     name=human_gene.symbol,
                     identifier=str(human_gene.entrez)
@@ -346,7 +334,7 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
     def enrich_genes_with_families(self, graph: BELGraph) -> None:
         """Enrich genes in the BEL graph with their families."""
         self.add_namespace_to_graph(graph)
-        for node_data, human_gene in self._iter_genes(graph):
+        for node_data, human_gene in self.iter_genes(graph):
             for family in human_gene.gene_families:
                 graph.add_is_a(node_data, family_to_bel(family, node_data[FUNCTION]))
 
@@ -366,16 +354,7 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         results = self.gene_family(family_name=family_name)
         return _deal_with_nonsense(results)
 
-    def _enrich_hgnc_with_entrez_equivalences(self, graph, node):
-        """
-
-        :param pybel.BELGraph graph:
-        :param node:
-        :return: the hash of the edge added
-        :rtype: str
-        """
-        data = graph.node[node]
-
+    def _enrich_hgnc_with_entrez_equivalences(self, graph: BELGraph, data: BaseEntity):
         namespace = data.get(NAMESPACE)
 
         if namespace.lower() != 'hgnc':
@@ -385,51 +364,48 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         name = data[NAME]
         entrez = self.hgnc_symbol_entrez_id_mapping[name]
 
-        return graph.add_equivalence(node, _func_to_dsl[func](
+        return graph.add_equivalence(data, FUNC_TO_DSL[func](
             namespace='ncbigene',
             name=name,
-            identifier=str(entrez)
+            identifier=str(entrez),
         ))
 
-    def enrich_hgnc_with_entrez_equivalences(self, graph):
-        """Add equivalent Entrez nodes for all HGNC genes.
-
-        :param pybel.BELGraph graph: The BEL graph to enrich
-        """
+    def enrich_hgnc_with_entrez_equivalences(self, graph: BELGraph):
+        """Add equivalent Entrez nodes for all HGNC genes."""
         self.add_namespace_to_graph(graph)
 
-        for node in graph.nodes():
-            self._enrich_hgnc_with_entrez_equivalences(graph, node)
+        for _, data in graph.nodes(data=True):
+            self._enrich_hgnc_with_entrez_equivalences(graph, data)
 
-    def enrich_families_with_genes(self, graph):
-        """Enrich gene families in the BEL graph with their member genes.
-
-        :param pybel.BELGraph graph: The BEL graph to enrich
-        """
+    def enrich_families_with_genes(self, graph: BELGraph):
+        """Enrich gene families in the BEL graph with their member genes."""
         self.add_namespace_to_graph(graph)
 
-        for gene_family_node, data in graph.nodes(data=True):
-            if data[FUNCTION] != GENE:
+        for _, gene_family_node in graph.nodes(data=True):
+            if gene_family_node[FUNCTION] != GENE:
                 continue
 
-            if data.get(NAMESPACE).lower() not in {'gfam', 'hgnc.family', 'hgnc.genefamily'}:
+            if gene_family_node.get(NAMESPACE).lower() not in {'gfam', 'hgnc.family', 'hgnc.genefamily'}:
                 continue
 
-            if IDENTIFIER in data:
-                gene_family_model = self.get_family_by_id(data[IDENTIFIER])
-            elif NAME in data:
-                gene_family_model = self.get_family_by_name(data[NAME])
+            if IDENTIFIER in gene_family_node:
+                gene_family_model = self.get_family_by_id(gene_family_node[IDENTIFIER])
+            elif NAME in gene_family_node:
+                gene_family_model = self.get_family_by_name(gene_family_node[NAME])
             else:
                 raise ValueError
 
             if gene_family_model is None:
-                log.info('family not found: %s', data)
+                log.info('family not found: %s', gene_family_node)
                 continue
 
             for human_gene in gene_family_model.hgncs:
                 graph.add_is_a(gene_to_bel(human_gene), gene_family_node)
 
     """ Mapping dictionaries"""
+
+    def _get_name(self, human_gene: HumanGene) -> str:
+        return str(human_gene.symbol)
 
     def _get_identifier(self, human_gene: HumanGene) -> str:
         """Get the identifier from a human gene SQLAlchemy model.
@@ -609,17 +585,16 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
             for human_gene in family.hgncs
         }
 
-    def add_central_dogma(self, graph, node):
+    def add_central_dogma(self, graph: BELGraph, node: BaseEntity):
         """Add the central dogma of biology.
 
         :param graph:
         :param node:
         """
-        data = graph.node[node]
-        if VARIANTS in data:
+        if VARIANTS in node:
             return
 
-        human_gene = self.get_node(graph, node)
+        human_gene = self.get_node(node)
         encoding = encodings.get(human_gene.locus_type, 'GRP')
 
         if 'M' in encoding:

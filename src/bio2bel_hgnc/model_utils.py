@@ -2,12 +2,13 @@
 
 """Bio2BEL HGNC Model utilities."""
 
-from pybel.constants import GENE, MIRNA, PROTEIN, RNA
-from pybel.dsl import gene as gene_dsl, mirna as mirna_dsl, protein as protein_dsl, rna as rna_dsl
-from pybel.dsl.nodes import CentralDogma
+from typing import List, Optional
 
+from pybel import BELGraph
+from pybel.constants import MIRNA, PROTEIN, RNA
+from pybel.dsl import CentralDogma, FUNC_TO_DSL, Variant, gene as gene_dsl, protein as protein_dsl
 from .constants import encodings
-from .models import HumanGene
+from .models import GeneFamily, HumanGene, UniProt
 
 __all__ = [
     'gene_to_bel',
@@ -16,67 +17,52 @@ __all__ = [
 ]
 
 
-def gene_to_bel(human_gene: HumanGene, func=None, variants=None) -> CentralDogma:
+def gene_to_bel(human_gene: HumanGene, func: Optional[str] = None,
+                variants: Optional[List[Variant]] = None) -> CentralDogma:
     """Convert a Gene to a PyBEL gene.
 
-    :param bio2bel_hgnc.models.HumanGene human_gene:  A Gene model
+    :param human_gene:  A Gene model
     :rtype: pybel.dsl.gene
     """
-    if func == PROTEIN:
-        dsl = protein_dsl
-    elif func == RNA:
-        dsl = rna_dsl
-    elif func == MIRNA:
-        dsl = mirna_dsl
-    elif func == GENE:
-        dsl = gene_dsl
-    else:
-        raise ValueError
+    dsl = FUNC_TO_DSL[func] if func else gene_dsl
 
-    if variants is not None:
-        # FIXME handle variants
-        variants = [
-            v
-            for v in variants
-        ]
-
-    return dsl(
+    rv = dsl(
         namespace='hgnc',
         name=str(human_gene.symbol),
         identifier=str(human_gene.identifier),
-        variants=variants,
     )
 
+    if variants is not None:
+        return rv.with_variants(variants)
 
-def family_to_bel(family, func=None):
-    """Converts a Gene Family model to a PyBEL gene
+    return rv
 
-    :param bio2bel_hgnc.models.GeneFamily family: A Gene Family model
+
+def family_to_bel(family: GeneFamily, func: Optional[str] = None,
+                  variants: Optional[List[Variant]] = None) -> CentralDogma:
+    """Convert a Gene Family model to a PyBEL gene.
+
+    :param family: A Gene Family model
     :rtype: pybel.dsl.gene
     """
-    if func == PROTEIN:
-        dsl = protein_dsl
-    elif func == RNA:
-        dsl = rna_dsl
-    elif func == MIRNA:
-        dsl = mirna_dsl
-    elif func == GENE:
-        dsl = gene_dsl
-    else:
-        raise ValueError
+    dsl = FUNC_TO_DSL[func] if func else gene_dsl
 
-    return dsl(
+    rv = dsl(
         namespace='hgnc.genefamily',
         identifier=str(family.family_identifier),
         name=str(family.family_name)
     )
 
+    if variants is not None:
+        return rv.with_variants(variants)
 
-def uniprot_to_bel(uniprot) -> protein_dsl:
-    """
+    return rv
+
+
+def uniprot_to_bel(uniprot: UniProt) -> protein_dsl:
+    """Convert the uniprot model to BEL.
 
     :param bio2bel_hgnc.models.UniProt uniprot:
-    :return:
     """
     return protein_dsl(
         namespace='uniprot',
@@ -85,8 +71,8 @@ def uniprot_to_bel(uniprot) -> protein_dsl:
     )
 
 
-def add_central_dogma(graph, human_gene):
-    """Add the corresponding protein and"""
+def add_central_dogma(graph: BELGraph, human_gene: HumanGene):
+    """Add the corresponding protein and/or RNA."""
     encoding = encodings.get(human_gene.locus_type, 'GRP')
 
     if 'M' in encoding:

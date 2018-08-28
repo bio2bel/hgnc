@@ -16,7 +16,7 @@ __all__ = [
 
 
 def get_node(graph, node, manager=None):
-    """Gets a node from the database, whether it has a HGNC, RGD, MGI, or EG identifier.
+    """Get a node from the database, whether it has a HGNC, RGD, MGI, or EG identifier.
 
     :param pybel.BELGraph graph: A BEL graph
     :param tuple node: A PyBEL node tuple
@@ -25,11 +25,11 @@ def get_node(graph, node, manager=None):
     """
     if manager is None:
         manager = Manager()
-    return manager.get_node(graph, node)
+    return manager.get_node(graph._node[node])
 
 
 def add_node_orthologies(graph, node, manager=None, add_leaves=False):
-    """Given a node that's HGNC, add orthology relationships
+    """Given a node that's HGNC, add orthology relationships.
 
     :param pybel.BELGraph graph: A BEL graph
     :param tuple node: A PyBEL node tuple
