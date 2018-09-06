@@ -2,6 +2,7 @@
 
 """A package for converting HGNC to BEL."""
 
+from .gfam_manager import Manager as FamilyManager
 from .manager import Manager
 from .utils import get_version
 

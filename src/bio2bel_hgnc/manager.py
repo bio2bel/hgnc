@@ -7,6 +7,7 @@ from collections import Counter
 from typing import Dict, Iterable, Optional, Tuple
 
 import click
+from networkx import relabel_nodes
 from tqdm import tqdm
 
 from bio2bel import AbstractManager
@@ -17,7 +18,6 @@ from pybel import BELGraph
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, MIRNA, NAME, NAMESPACE, PROTEIN, RNA, VARIANTS
 from pybel.dsl import BaseEntity, FUNC_TO_DSL, rna as rna_dsl
 from pybel.manager.models import NamespaceEntry
-from pybel.struct.utils import relabel_inplace
 from .constants import MODULE_NAME, encodings
 from .gfam_manager import Manager as GfamManager
 from .model_utils import add_central_dogma, family_to_bel, gene_to_bel, uniprot_to_bel
@@ -274,7 +274,7 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
 
     def iter_genes(self, graph: BELGraph) -> Iterable[Tuple[BaseEntity, HumanGene]]:
         """Iterate over pairs of BEL nodes and HGNC genes."""
-        for _, node in list(graph.nodes(data=True)):
+        for node in list(graph):
             human_gene = self.get_node(node)
             if human_gene is not None:
                 yield node, human_gene
@@ -296,7 +296,7 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
 
         # FIXME what about when an HGNC node appears in a fusion, complex, or composite?
 
-        relabel_inplace(graph, mapping)
+        relabel_nodes(graph, mapping, copy=False)
 
         for _, data in graph.nodes(data=True):
             assert isinstance(data, BaseEntity), f'end issue {data}'
