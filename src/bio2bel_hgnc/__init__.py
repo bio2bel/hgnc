@@ -2,9 +2,9 @@
 
 """A package for converting HGNC to BEL."""
 
-from .gfam_manager import Manager as FamilyManager
-from .manager import Manager
-from .utils import get_version
+from .gfam_manager import Manager as FamilyManager  # noqa: F401
+from .manager import Manager  # noqa: F401
+from .utils import get_version  # noqa: F401
 
 __version__ = '0.1.1-dev'
 

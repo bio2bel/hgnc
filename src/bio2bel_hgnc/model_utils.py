@@ -19,11 +19,7 @@ __all__ = [
 
 def gene_to_bel(human_gene: HumanGene, func: Optional[str] = None,
                 variants: Optional[List[Variant]] = None) -> CentralDogma:
-    """Convert a Gene to a PyBEL gene.
-
-    :param human_gene:  A Gene model
-    :rtype: pybel.dsl.gene
-    """
+    """Convert a Gene to a PyBEL gene."""
     dsl = FUNC_TO_DSL[func] if func else gene_dsl
 
     rv = dsl(
@@ -40,11 +36,7 @@ def gene_to_bel(human_gene: HumanGene, func: Optional[str] = None,
 
 def family_to_bel(family: GeneFamily, func: Optional[str] = None,
                   variants: Optional[List[Variant]] = None) -> CentralDogma:
-    """Convert a Gene Family model to a PyBEL gene.
-
-    :param family: A Gene Family model
-    :rtype: pybel.dsl.gene
-    """
+    """Convert a Gene Family model to a PyBEL gene."""
     dsl = FUNC_TO_DSL[func] if func else gene_dsl
 
     rv = dsl(
@@ -60,10 +52,7 @@ def family_to_bel(family: GeneFamily, func: Optional[str] = None,
 
 
 def uniprot_to_bel(uniprot: UniProt) -> protein_dsl:
-    """Convert the uniprot model to BEL.
-
-    :param bio2bel_hgnc.models.UniProt uniprot:
-    """
+    """Convert a UniProt model to BEL."""
     return protein_dsl(
         namespace='uniprot',
         name=str(uniprot.uniprotid),
@@ -71,7 +60,7 @@ def uniprot_to_bel(uniprot: UniProt) -> protein_dsl:
     )
 
 
-def add_central_dogma(graph: BELGraph, human_gene: HumanGene):
+def add_central_dogma(graph: BELGraph, human_gene: HumanGene) -> None:
     """Add the corresponding protein and/or RNA."""
     encoding = encodings.get(human_gene.locus_type, 'GRP')
 

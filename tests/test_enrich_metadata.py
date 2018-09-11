@@ -4,34 +4,33 @@
 
 import logging
 import unittest
-from pybel import BELGraph
-from pybel.constants import EQUIVALENT_TO, ORTHOLOGOUS, RELATION, TRANSCRIBED_TO, TRANSLATED_TO
-from pybel.dsl import gene, mirna, protein, rna
 
 from bio2bel_hgnc.constants import GENE_FAMILY_KEYWORD
-from bio2bel_hgnc.enrich import (
-    add_node_orthologies, get_node,
-)
+from bio2bel_hgnc.models import HumanGene
+from pybel import BELGraph
+from pybel.constants import EQUIVALENT_TO, ORTHOLOGOUS, RELATION
+from pybel.dsl import gene, mirna, protein, rna
 from tests.cases import TemporaryCacheMixin
 
 log = logging.getLogger(__name__)
+
+cd33_hgnc_name = protein(name='CD33', namespace='HGNC')
+cd33_hgnc_identifier = protein(identifier='1659', namespace='HGNC')
+cd33_hgnc_name_as_identifier = protein(name='1659', namespace='HGNC')
 
 
 class TestEnrich(TemporaryCacheMixin):
     """Test enrichment methods."""
 
-    def help_check_cd33_model(self, model):
-        """Check if the given model is CD33.
-
-        :param pyhgnc.manager.models.HGNC model: The result from a search of the PyHGNC database
-        """
+    def help_check_cd33_model(self, model: HumanGene):
+        """Check if the given model is CD33."""
         self.assertIsNotNone(model)
         self.assertEqual('1659', str(model.identifier))
         self.assertEqual('CD33', model.symbol)
         self.assertEqual('CD33 molecule', model.name)
 
     def test_pyhgnc_loaded(self):
-        """"Test that data has been loaded properly."""
+        """Test that data has been loaded properly."""
         cd33_results = self.manager.hgnc(symbol='CD33')
         self.assertIsNotNone(cd33_results)
 
@@ -43,10 +42,8 @@ class TestEnrich(TemporaryCacheMixin):
     def test_get_hgnc_node(self):
         """Test getting a node by name from the database."""
         graph = BELGraph()
-
-        cd33_tuple = graph.add_node_from_data(protein(name='CD33', namespace='HGNC'))
-
-        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
+        graph.add_node_from_data(cd33_hgnc_name)
+        cd33_model = self.manager.get_node(cd33_hgnc_name)
         self.help_check_cd33_model(cd33_model)
 
     def test_get_hgnc_id_node(self):
@@ -55,7 +52,7 @@ class TestEnrich(TemporaryCacheMixin):
 
         cd33_tuple = graph.add_node_from_data(protein(identifier='1659', namespace='HGNC'))
 
-        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
+        cd33_model = self.manager.get_node(cd33_tuple)
         self.help_check_cd33_model(cd33_model)
 
     @unittest.skip('HGNC does not have RGD symbols')
@@ -66,7 +63,7 @@ class TestEnrich(TemporaryCacheMixin):
         # CD33's MGI counterpart's identifier
         cd33_tuple = graph.add_node_from_data(protein(name='Cd33', namespace='RGD'))
 
-        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
+        cd33_model = self.manager.get_node(cd33_tuple)
         self.help_check_cd33_model(cd33_model)
 
     def test_get_rgd_id_node(self):
@@ -76,7 +73,7 @@ class TestEnrich(TemporaryCacheMixin):
         # CD33's RGD counterpart's identifier
         cd33_tuple = graph.add_node_from_data(protein(identifier='1596020', namespace='RGD'))
 
-        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
+        cd33_model = self.manager.get_node(cd33_tuple)
         self.help_check_cd33_model(cd33_model)
 
     @unittest.skip('HGNC does not have MGI symbol information')
@@ -87,7 +84,7 @@ class TestEnrich(TemporaryCacheMixin):
         # CD33's MGI counterpart's identifier
         cd33_tuple = graph.add_node_from_data(protein(name='Cd33', namespace='MGI'))
 
-        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
+        cd33_model = self.manager.get_node(cd33_tuple)
         self.help_check_cd33_model(cd33_model)
 
     def test_get_mgi_id_node(self):
@@ -97,7 +94,7 @@ class TestEnrich(TemporaryCacheMixin):
         # CD33's MGI counterpart's identifier
         cd33_tuple = graph.add_node_from_data(protein(identifier='99440', namespace='MGI'))
 
-        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
+        cd33_model = self.manager.get_node(cd33_tuple)
         self.help_check_cd33_model(cd33_model)
 
     def test_get_entrez_node(self):
@@ -107,7 +104,7 @@ class TestEnrich(TemporaryCacheMixin):
         # CD33's MGI counterpart's identifier
         cd33_tuple = graph.add_node_from_data(protein(identifier='945', namespace='ENTREZ'))
 
-        cd33_model = get_node(graph, cd33_tuple, manager=self.manager)
+        cd33_model = self.manager.get_node(cd33_tuple)
         self.help_check_cd33_model(cd33_model)
 
     def test_add_equivalency(self):
@@ -133,7 +130,7 @@ class TestEnrich(TemporaryCacheMixin):
         self.assertIn(RELATION, v)
         self.assertEqual(EQUIVALENT_TO, v[RELATION])
 
-        self.assertIn(cd33_hgnc_tuple, graph.edge[cd33_eg_tuple])
+        self.assertIn(cd33_hgnc_tuple, graph[cd33_eg_tuple])
         v = list(graph[cd33_eg_tuple][cd33_hgnc_tuple].values())[0]
         self.assertIn(RELATION, v)
         self.assertEqual(EQUIVALENT_TO, v[RELATION])
@@ -152,18 +149,18 @@ class TestEnrich(TemporaryCacheMixin):
         self.assertEqual(2, graph.number_of_nodes())
         self.assertEqual(0, graph.number_of_edges())
 
-        add_node_orthologies(graph, cd33_hgnc, manager=self.manager, add_leaves=False)
+        self.manager.add_node_orthologies(graph, cd33_hgnc, add_leaves=False)
 
         self.assertEqual(2, graph.number_of_nodes())
         self.assertEqual(2, graph.number_of_edges())
 
-        self.assertIn(cd33_mgi.as_tuple(), graph.edge[cd33_hgnc.as_tuple()])
-        v = list(graph.edge[cd33_hgnc.as_tuple()][cd33_mgi.as_tuple()].values())[0]
+        self.assertIn(cd33_mgi, graph[cd33_hgnc])
+        v = list(graph[cd33_hgnc][cd33_mgi].values())[0]
         self.assertIn(RELATION, v)
         self.assertEqual(ORTHOLOGOUS, v[RELATION])
 
-        self.assertIn(cd33_hgnc.as_tuple(), graph.edge[cd33_mgi.as_tuple()])
-        v = list(graph.edge[cd33_mgi.as_tuple()][cd33_hgnc.as_tuple()].values())[0]
+        self.assertIn(cd33_hgnc, graph[cd33_mgi])
+        v = list(graph[cd33_mgi][cd33_hgnc].values())[0]
         self.assertIn(RELATION, v)
         self.assertEqual(ORTHOLOGOUS, v[RELATION])
 
@@ -181,18 +178,18 @@ class TestEnrich(TemporaryCacheMixin):
         self.assertEqual(2, graph.number_of_nodes())
         self.assertEqual(0, graph.number_of_edges())
 
-        add_node_orthologies(graph, cd33_hgnc, manager=self.manager, add_leaves=False)
+        self.manager.add_node_orthologies(graph, cd33_hgnc, add_leaves=False)
 
         self.assertEqual(2, graph.number_of_nodes())
         self.assertEqual(2, graph.number_of_edges())
 
-        self.assertIn(cd33_hgnc.as_tuple(), graph.edge[cd33_mgi_id.as_tuple()])
-        v = list(graph.edge[cd33_mgi_id.as_tuple()][cd33_hgnc.as_tuple()].values())[0]
+        self.assertIn(cd33_hgnc, graph[cd33_mgi_id])
+        v = list(graph[cd33_mgi_id][cd33_hgnc].values())[0]
         self.assertIn(RELATION, v)
         self.assertEqual(ORTHOLOGOUS, v[RELATION])
 
-        self.assertIn(cd33_mgi_id.as_tuple(), graph.edge[cd33_hgnc.as_tuple()])
-        v = list(graph.edge[cd33_hgnc.as_tuple()][cd33_mgi_id.as_tuple()].values())[0]
+        self.assertIn(cd33_mgi_id, graph[cd33_hgnc])
+        v = list(graph[cd33_hgnc][cd33_mgi_id].values())[0]
         self.assertIn(RELATION, v)
         self.assertEqual(ORTHOLOGOUS, v[RELATION])
 
@@ -237,11 +234,11 @@ class TestEnrich(TemporaryCacheMixin):
         self.assertEqual(1, graph.number_of_edges())
 
         mir503hg_rna = rna(namespace='HGNC', name='MIR503HG', identifier='28258')
-        self.assertTrue(graph.has_node_with_data(mir503hg_rna))
+        self.assertIn(mir503hg_rna, graph)
 
         # Check doesn't add protein
         mir503hg_protein = protein(namespace='HGNC', name='MIR503HG', identifier='28258')
-        self.assertFalse(graph.has_node_with_data(mir503hg_protein))
+        self.assertNotIn(mir503hg_protein, graph)
 
     def test_add_protein(self):
         """Test inferring the central dogma for a protein."""
@@ -260,16 +257,16 @@ class TestEnrich(TemporaryCacheMixin):
         self.assertEqual(2, graph.number_of_edges())
 
         cd33_rna = rna(name='CD33', namespace='HGNC')
-        self.assertTrue(graph.has_node_with_data(cd33_rna), msg='Nodes: {}'.format(list(graph)))
+        self.assertIn(cd33_rna, graph, msg='Nodes: {}'.format(list(graph)))
 
-        self.assertIn(cd33_rna.as_tuple(), graph.edge[cd33_gene.as_tuple()])
-        self.assertIn(transcribe_code, graph.edge[cd33_gene.as_tuple()][cd33_rna.as_tuple()])
+        self.assertIn(cd33_rna, graph[cd33_gene])
+        # self.assertIn(transcribe_code, graph[cd33_gene][cd33_rna])
 
         cd33_protein = protein(name='CD33', namespace='HGNC')
-        self.assertTrue(graph.has_node_with_data(cd33_protein))
+        self.assertIn(cd33_protein, graph)
 
-        self.assertIn(cd33_protein.as_tuple(), graph.edge[cd33_rna.as_tuple()])
-        self.assertIn(translate_code, graph.edge[cd33_rna.as_tuple()][cd33_protein.as_tuple()])
+        self.assertIn(cd33_protein, graph[cd33_rna])
+        # self.assertIn(translate_code, graph[cd33_rna][cd33_protein])
 
     def test_enrich_genes_with_families(self):
         """Tests enriching genes with their families."""
@@ -287,8 +284,8 @@ class TestEnrich(TemporaryCacheMixin):
 
         for x in ["CD molecules", "V-set domain containing", "Sialic acid binding Ig like lectins"]:
             g = gene(namespace=GENE_FAMILY_KEYWORD, name=x)
-            self.assertTrue(graph.has_node_with_data(g))
-            self.assertIn(g.as_tuple(), graph.edge[cd33_gene.as_tuple()])
+            self.assertIn(g, graph)
+            self.assertIn(g, graph[cd33_gene])
 
     def test_enrich_family_with_genes(self):
         """Test enriching families with their genes."""
@@ -306,8 +303,8 @@ class TestEnrich(TemporaryCacheMixin):
 
         for x in ["CD33", 'CD34']:
             g = gene(namespace='HGNC', name=x)
-            self.assertTrue(graph.has_node_with_data(g))
-            self.assertIn(f.as_tuple(), graph.edge[g.as_tuple()])
+            self.assertIn(g, graph)
+            self.assertIn(f, graph[g])
 
 
 if __name__ == '__main__':
