@@ -2,7 +2,7 @@
 
 """Enrichment functions for BEL graphs."""
 
-from bio2bel.utils import get_data_dir
+from bio2bel import get_data_dir
 
 VERSION = '0.1.1-dev'
 
@@ -10,10 +10,14 @@ MODULE_NAME = 'hgnc'
 #: The default directory where PyBEL files, including logs and the  default cache, are stored. Created if not exists.
 DATA_DIR = get_data_dir(MODULE_NAME)
 
-GENE_FAMILY_KEYWORD = 'GFAM'
+HGNC_GENE_FAMILY = 'hgnc.genefamily'
+HGNC = 'hgnc'
+UNIPROT = 'uniprot'
+ENTREZ = 'ncbigene'
+
 
 #: Encodings from https://www.genenames.org/cgi-bin/statistics
-encodings = {
+ENCODINGS = {
     # protein-coding gene
     'gene with protein product': 'GRP',
     # non-coding RNA

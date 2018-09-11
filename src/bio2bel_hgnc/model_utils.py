@@ -7,7 +7,7 @@ from typing import List, Optional
 from pybel import BELGraph
 from pybel.constants import MIRNA, PROTEIN, RNA
 from pybel.dsl import CentralDogma, FUNC_TO_DSL, Variant, gene as gene_dsl, protein as protein_dsl
-from .constants import encodings
+from .constants import ENCODINGS, HGNC, HGNC_GENE_FAMILY, UNIPROT
 from .models import GeneFamily, HumanGene, UniProt
 
 __all__ = [
@@ -23,7 +23,7 @@ def gene_to_bel(human_gene: HumanGene, func: Optional[str] = None,
     dsl = FUNC_TO_DSL[func] if func else gene_dsl
 
     rv = dsl(
-        namespace='hgnc',
+        namespace=HGNC,
         name=str(human_gene.symbol),
         identifier=str(human_gene.identifier),
     )
@@ -40,7 +40,7 @@ def family_to_bel(family: GeneFamily, func: Optional[str] = None,
     dsl = FUNC_TO_DSL[func] if func else gene_dsl
 
     rv = dsl(
-        namespace='hgnc.genefamily',
+        namespace=HGNC_GENE_FAMILY,
         identifier=str(family.family_identifier),
         name=str(family.family_name)
     )
@@ -54,7 +54,7 @@ def family_to_bel(family: GeneFamily, func: Optional[str] = None,
 def uniprot_to_bel(uniprot: UniProt) -> protein_dsl:
     """Convert a UniProt model to BEL."""
     return protein_dsl(
-        namespace='uniprot',
+        namespace=UNIPROT,
         name=str(uniprot.uniprotid),
         identifier=str(uniprot.uniprotid),
     )
@@ -62,7 +62,7 @@ def uniprot_to_bel(uniprot: UniProt) -> protein_dsl:
 
 def add_central_dogma(graph: BELGraph, human_gene: HumanGene) -> None:
     """Add the corresponding protein and/or RNA."""
-    encoding = encodings.get(human_gene.locus_type, 'GRP')
+    encoding = ENCODINGS.get(human_gene.locus_type, 'GRP')
 
     if 'M' in encoding:
         mirna = gene_to_bel(human_gene, func=MIRNA)

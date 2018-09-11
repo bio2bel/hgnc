@@ -18,7 +18,7 @@ from pybel import BELGraph
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, MIRNA, NAME, NAMESPACE, PROTEIN, RNA, VARIANTS
 from pybel.dsl import BaseEntity, CentralDogma, FUNC_TO_DSL, rna as rna_dsl
 from pybel.manager.models import NamespaceEntry
-from .constants import MODULE_NAME, encodings
+from .constants import ENCODINGS, ENTREZ, MODULE_NAME
 from .gfam_manager import Manager as GfamManager
 from .model_utils import add_central_dogma, family_to_bel, gene_to_bel, uniprot_to_bel
 from .models import AliasName, AliasSymbol, Base, GeneFamily, HumanGene, MouseGene, RatGene, UniProt
@@ -327,7 +327,7 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
 
             if human_gene.entrez:
                 graph.add_equivalence(node, FUNC_TO_DSL[func](
-                    namespace='ncbigene',
+                    namespace=ENTREZ,
                     name=human_gene.symbol,
                     identifier=str(human_gene.entrez)
                 ))
@@ -364,7 +364,7 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
     def _enrich_hgnc_with_entrez_equivalences(self, graph: BELGraph, data: BaseEntity) -> Optional[str]:
         namespace = data.get(NAMESPACE)
 
-        if namespace.lower() != 'hgnc':
+        if namespace.lower() not in {'hgnc'}:
             return
 
         func = data[FUNCTION]
@@ -372,7 +372,7 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         entrez = self.hgnc_symbol_entrez_id_mapping[name]
 
         return graph.add_equivalence(data, FUNC_TO_DSL[func](
-            namespace='ncbigene',
+            namespace=ENTREZ,
             name=name,
             identifier=str(entrez),
         ))
@@ -503,7 +503,7 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
     def _get_gene_encodings(self) -> Mapping[str, str]:
         """Get the name to encoding dictionary for HGNC gene names."""
         return {
-            symbol: encodings.get(locus_type, 'GRP')
+            symbol: ENCODINGS.get(locus_type, 'GRP')
             for symbol, locus_type in self.session.query(HumanGene.symbol, HumanGene.locus_type).all()
         }
 
@@ -567,7 +567,7 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
             return
 
         human_gene = self.get_node(node)
-        encoding = encodings.get(human_gene.locus_type, 'GRP')
+        encoding = ENCODINGS.get(human_gene.locus_type, 'GRP')
 
         if 'M' in encoding:
             mirna = gene_to_bel(human_gene, func=MIRNA)
@@ -589,7 +589,7 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
 
     def _create_namespace_entry_from_model(self, human_gene, namespace):
         return NamespaceEntry(
-            encoding=encodings.get(human_gene.locus_type, 'GRP'),
+            encoding=ENCODINGS.get(human_gene.locus_type, 'GRP'),
             identifier=human_gene.identifier,
             name=human_gene.symbol,
             namespace=namespace
