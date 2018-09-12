@@ -18,6 +18,9 @@ log = logging.getLogger(__name__)
 cd33_hgnc_name = protein(name='CD33', namespace=HGNC)
 cd33_hgnc_identifier = protein(identifier='1659', namespace=HGNC)
 cd33_hgnc_name_as_identifier = protein(name='1659', namespace=HGNC)
+cd33_hgnc_name_and_identifier = protein(name='CD33', identifier='1659', namespace=HGNC)
+
+cd34_hgnc_name_and_identifier = protein(name='CD34', identifier='1662', namespace=HGNC)
 
 cd33_rgd_name = protein(name='Cd33', namespace='RGD')
 cd33_rgd_id = protein(identifier='1596020', namespace='RGD')
@@ -25,7 +28,7 @@ cd33_rgd_id = protein(identifier='1596020', namespace='RGD')
 cd33_mgi_name = protein(name='Cd33', namespace='MGI')
 cd33_mgi_identifier = protein(identifier='99440', namespace='MGI')
 
-cd33_entrez = protein(identifier='945', namespace=ENTREZ)
+cd33_entrez = protein(identifier='945', name='CD33', namespace=ENTREZ)
 
 cd_family = gene(name="CD molecules", namespace=HGNC_GENE_FAMILY)
 
@@ -253,7 +256,7 @@ class TestEnrich(TemporaryCacheMixin):
 
         for x in ["CD molecules", "V-set domain containing", "Sialic acid binding Ig like lectins"]:
             g = gene(namespace=HGNC_GENE_FAMILY, name=x)
-            self.assertIn(g, graph, msg='Nodes: {}'.format(list(graph)))
+            self.assertIn(g, graph, msg='Nodes: {}'.format([str(dict(**node)) for node in graph]))
             self.assertIn(g, graph[cd33_hgnc_name])
 
     def test_enrich_family_with_genes(self):
@@ -269,9 +272,9 @@ class TestEnrich(TemporaryCacheMixin):
         self.assertEqual(3, graph.number_of_nodes())
         self.assertEqual(2, graph.number_of_edges())
 
-        for x in ["CD33", 'CD34']:
-            g = gene(namespace=HGNC, name=x)
-            self.assertIn(g, graph, msg='Nodes: {}'.format(list(graph)))
+        for g in [cd33_hgnc_name_and_identifier, cd34_hgnc_name_and_identifier]:
+            g = g.get_rna().get_gene()
+            self.assertIn(g, graph, msg=f'Nodes: {list(graph)}')
             self.assertIn(cd_family, graph[g])
 
 
