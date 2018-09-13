@@ -4,7 +4,7 @@
 
 from bio2bel import get_data_dir
 
-VERSION = '0.1.1'
+VERSION = '0.1.2-dev'
 
 MODULE_NAME = 'hgnc'
 #: The default directory where PyBEL files, including logs and the  default cache, are stored. Created if not exists.
