@@ -15,8 +15,9 @@ from tests.cases import TemporaryCacheMixin
 
 log = logging.getLogger(__name__)
 
-cd33_hgnc_name = protein(name='CD33', namespace=HGNC)
-cd33_hgnc_identifier = protein(identifier='1659', namespace=HGNC)
+protein_hgnc_cd33 = protein(name='CD33', namespace=HGNC)
+gene_hgnc_cd33 = protein_hgnc_cd33.get_rna().get_gene()
+protein_hgnc_1659 = protein(identifier='1659', namespace=HGNC)
 cd33_hgnc_name_as_identifier = protein(name='1659', namespace=HGNC)
 cd33_hgnc_name_and_identifier = protein(name='CD33', identifier='1659', namespace=HGNC)
 
@@ -59,12 +60,12 @@ class TestEnrich(TemporaryCacheMixin):
 
     def test_get_hgnc_node(self):
         """Test getting a node by name from the database."""
-        cd33_model = self.manager.get_node(cd33_hgnc_name)
+        cd33_model = self.manager.get_node(protein_hgnc_cd33)
         self.help_check_cd33_model(cd33_model)
 
     def test_get_hgnc_id_node(self):
         """Test getting a node by identifier from the database."""
-        cd33_model = self.manager.get_node(cd33_hgnc_identifier)
+        cd33_model = self.manager.get_node(protein_hgnc_1659)
         self.help_check_cd33_model(cd33_model)
 
     @unittest.skip('HGNC does not have RGD symbols')
@@ -97,7 +98,7 @@ class TestEnrich(TemporaryCacheMixin):
     def test_add_equivalency(self):
         """Test that CD33 identified by HGNC and entrez can be equivalenced."""
         graph = BELGraph()
-        graph.add_node_from_data(cd33_hgnc_name)
+        graph.add_node_from_data(protein_hgnc_cd33)
 
         self.assertEqual(1, graph.number_of_nodes(), msg='wrong initial number of nodes')
         self.assertEqual(0, graph.number_of_edges(), msg='wrong initial number of edges')
@@ -107,13 +108,13 @@ class TestEnrich(TemporaryCacheMixin):
         # self.assertEqual(2, graph.number_of_nodes(), msg='nodes: {}'.format(list(graph)))
         # self.assertEqual(2, graph.number_of_edges(), msg='adding equivalence added wrong number of edges')
 
-        self.assertIn(cd33_entrez, set(graph[cd33_hgnc_name]))
-        v = list(graph[cd33_hgnc_name][cd33_entrez].values())[0]
+        self.assertIn(cd33_entrez, set(graph[protein_hgnc_cd33]))
+        v = list(graph[protein_hgnc_cd33][cd33_entrez].values())[0]
         self.assertIn(RELATION, v)
         self.assertEqual(EQUIVALENT_TO, v[RELATION])
 
-        self.assertIn(cd33_hgnc_name, set(graph[cd33_entrez]))
-        v = list(graph[cd33_entrez][cd33_hgnc_name].values())[0]
+        self.assertIn(protein_hgnc_cd33, set(graph[cd33_entrez]))
+        v = list(graph[cd33_entrez][protein_hgnc_cd33].values())[0]
         self.assertIn(RELATION, v)
         self.assertEqual(EQUIVALENT_TO, v[RELATION])
 
@@ -121,24 +122,24 @@ class TestEnrich(TemporaryCacheMixin):
     def test_add_orthology(self):
         """Test adding orthologies when both nodes are identified by name."""
         graph = BELGraph()
-        graph.add_node_from_data(cd33_hgnc_name)
+        graph.add_node_from_data(protein_hgnc_cd33)
         graph.add_node_from_data(cd33_mgi_name)
 
         self.assertEqual(2, graph.number_of_nodes())
         self.assertEqual(0, graph.number_of_edges())
 
-        self.manager.add_node_orthologies(graph, cd33_hgnc_name, add_leaves=False)
+        self.manager.add_node_orthologies(graph, protein_hgnc_cd33, add_leaves=False)
 
         self.assertEqual(2, graph.number_of_nodes())
         self.assertEqual(2, graph.number_of_edges())
 
-        self.assertIn(cd33_mgi_name, graph[cd33_hgnc_name])
-        v = list(graph[cd33_hgnc_name][cd33_mgi_name].values())[0]
+        self.assertIn(cd33_mgi_name, graph[protein_hgnc_cd33])
+        v = list(graph[protein_hgnc_cd33][cd33_mgi_name].values())[0]
         self.assertIn(RELATION, v)
         self.assertEqual(ORTHOLOGOUS, v[RELATION])
 
-        self.assertIn(cd33_hgnc_name, graph[cd33_mgi_name])
-        v = list(graph[cd33_mgi_name][cd33_hgnc_name].values())[0]
+        self.assertIn(protein_hgnc_cd33, graph[cd33_mgi_name])
+        v = list(graph[cd33_mgi_name][protein_hgnc_cd33].values())[0]
         self.assertIn(RELATION, v)
         self.assertEqual(ORTHOLOGOUS, v[RELATION])
 
@@ -146,24 +147,24 @@ class TestEnrich(TemporaryCacheMixin):
     def test_add_orthology_target_has_id(self):
         """Test adding orthologies when the target is identified by its database identifier."""
         graph = BELGraph()
-        graph.add_node_from_data(cd33_hgnc_name)
+        graph.add_node_from_data(protein_hgnc_cd33)
         graph.add_node_from_data(cd33_mgi_identifier)
 
         self.assertEqual(2, graph.number_of_nodes())
         self.assertEqual(0, graph.number_of_edges())
 
-        self.manager.add_node_orthologies(graph, cd33_hgnc_name, add_leaves=False)
+        self.manager.add_node_orthologies(graph, protein_hgnc_cd33, add_leaves=False)
 
         self.assertEqual(2, graph.number_of_nodes())
         self.assertEqual(2, graph.number_of_edges())
 
-        self.assertIn(cd33_hgnc_name, graph[cd33_mgi_identifier])
-        v = list(graph[cd33_mgi_identifier][cd33_hgnc_name].values())[0]
+        self.assertIn(protein_hgnc_cd33, graph[cd33_mgi_identifier])
+        v = list(graph[cd33_mgi_identifier][protein_hgnc_cd33].values())[0]
         self.assertIn(RELATION, v)
         self.assertEqual(ORTHOLOGOUS, v[RELATION])
 
-        self.assertIn(cd33_mgi_identifier, graph[cd33_hgnc_name])
-        v = list(graph[cd33_hgnc_name][cd33_mgi_identifier].values())[0]
+        self.assertIn(cd33_mgi_identifier, graph[protein_hgnc_cd33])
+        v = list(graph[protein_hgnc_cd33][cd33_mgi_identifier].values())[0]
         self.assertIn(RELATION, v)
         self.assertEqual(ORTHOLOGOUS, v[RELATION])
 
@@ -244,7 +245,7 @@ class TestEnrich(TemporaryCacheMixin):
     def test_enrich_genes_with_families(self):
         """Tests enriching genes with their families."""
         graph = BELGraph()
-        graph.add_node_from_data(cd33_hgnc_name)
+        graph.add_node_from_data(gene_hgnc_cd33)
 
         self.assertEqual(1, graph.number_of_nodes())
         self.assertEqual(0, graph.number_of_edges())
@@ -254,10 +255,15 @@ class TestEnrich(TemporaryCacheMixin):
         self.assertEqual(4, graph.number_of_nodes())
         self.assertEqual(3, graph.number_of_edges())
 
-        for x in ["CD molecules", "V-set domain containing", "Sialic acid binding Ig like lectins"]:
-            g = gene(namespace=HGNC_GENE_FAMILY, name=x)
-            self.assertIn(g, graph, msg='Nodes: {}'.format([str(dict(**node)) for node in graph]))
-            self.assertIn(g, graph[cd33_hgnc_name])
+        families = [
+            ('CD molecules', '471'),
+            ('V-set domain containing', '590'),
+            ('Sialic acid binding Ig like lectins', '745'),
+        ]
+        for name, identifier in families:
+            g = gene(namespace=HGNC_GENE_FAMILY, name=name, identifier=identifier)
+            self.assertIn(g, graph, msg='Nodes: {}'.format(list(graph)))
+            self.assertIn(g, graph[gene_hgnc_cd33])
 
     def test_enrich_family_with_genes(self):
         """Test enriching families with their genes."""
