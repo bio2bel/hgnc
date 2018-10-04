@@ -7,16 +7,21 @@ from collections import Counter
 from typing import Iterable, List, Mapping, Optional, Set, Tuple
 
 import click
+
+from tqdm import tqdm
+
+from networkx import relabel_nodes
+
 from bio2bel import AbstractManager
 from bio2bel.manager.bel_manager import BELManagerMixin
 from bio2bel.manager.flask_manager import FlaskMixin
 from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
-from networkx import relabel_nodes
+
 from pybel import BELGraph
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, MIRNA, NAME, NAMESPACE, PROTEIN, RNA, VARIANTS
 from pybel.dsl import BaseEntity, CentralDogma, FUNC_TO_DSL, rna as rna_dsl
 from pybel.manager.models import NamespaceEntry
-from tqdm import tqdm
+
 from .constants import ENCODINGS, ENTREZ, MODULE_NAME
 from .gfam_manager import Manager as GfamManager
 from .model_utils import add_central_dogma, family_to_bel, gene_to_bel, uniprot_to_bel
