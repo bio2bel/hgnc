@@ -7,21 +7,20 @@ from collections import Counter
 from typing import Iterable, List, Mapping, Optional, Set, Tuple
 
 import click
-from networkx import relabel_nodes
-from tqdm import tqdm
-
 from bio2bel import AbstractManager
 from bio2bel.manager.bel_manager import BELManagerMixin
 from bio2bel.manager.flask_manager import FlaskMixin
 from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
+from networkx import relabel_nodes
 from pybel import BELGraph
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, MIRNA, NAME, NAMESPACE, PROTEIN, RNA, VARIANTS
 from pybel.dsl import BaseEntity, CentralDogma, FUNC_TO_DSL, rna as rna_dsl
 from pybel.manager.models import NamespaceEntry
+from tqdm import tqdm
 from .constants import ENCODINGS, ENTREZ, MODULE_NAME
 from .gfam_manager import Manager as GfamManager
 from .model_utils import add_central_dogma, family_to_bel, gene_to_bel, uniprot_to_bel
-from .models import AliasName, AliasSymbol, Base, GeneFamily, HumanGene, MouseGene, RatGene, UniProt
+from .models import AliasName, AliasSymbol, Base, Enzyme, GeneFamily, HumanGene, MouseGene, RatGene, UniProt
 from .wrapper import BaseManager
 
 log = logging.getLogger(__name__)
@@ -62,7 +61,7 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
     identifiers_namespace = 'hgnc'
     identifiers_url = 'http://identifiers.org/hgnc/'
 
-    flask_admin_models = [HumanGene, GeneFamily, UniProt, MouseGene, RatGene, AliasName, AliasSymbol]
+    flask_admin_models = [HumanGene, GeneFamily, UniProt, MouseGene, RatGene, AliasName, AliasSymbol, Enzyme]
 
     def __init__(self, *args, **kwargs):  # noqa: D107
         super().__init__(*args, **kwargs)
@@ -214,6 +213,27 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
             return
 
         return human_genes[0]
+
+    def get_enzyme_by_ec_number(self, ec_number):
+        """Get a enzyme by its associated EC number.
+
+        :param str ec_number: EC number
+        :rtype: Optional[bio2bel_hgnc.models.HumanGene]
+        """
+        return self.session.query(Enzyme).filter(Enzyme.ec_number == ec_number).one_or_none()
+
+    def get_hgnc_from_alias_symbol(self, alias_symbol):
+        """Get HGNC from alias symbol.
+
+        :param str alias_symbol: alias symbol
+        :rtype: Optional[bio2bel_hgnc.models.HumanGene]
+        """
+        query_result = self.session.query(AliasSymbol).filter(AliasSymbol.alias_symbol == alias_symbol).one_or_none()
+
+        if not query_result:
+            return None
+
+        return query_result.hgnc
 
     def get_node(self, node: BaseEntity) -> Optional[HumanGene]:
         """Get a node from the database, whether it has a HGNC, RGD, MGI, or EG identifier.
