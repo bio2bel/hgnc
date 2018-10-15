@@ -45,7 +45,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, BaseManager):
 
     def _create_namespace_entry_from_model(self, gene_family: GeneFamily, namespace: Namespace) -> NamespaceEntry:
         return NamespaceEntry(
-            encoding='G',
+            encoding='GRP',
             identifier=str(gene_family.family_identifier),
             name=gene_family.family_name,
             namespace=namespace,
