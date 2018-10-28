@@ -19,10 +19,9 @@ CLASSIFIERS = [
     'License :: OSI Approved :: MIT License',
     'Operating System :: OS Independent',
     'Programming Language :: Python',
-    'Programming Language :: Python :: 3.5',
     'Programming Language :: Python :: 3.6',
     'Programming Language :: Python :: 3.7',
-    'Topic :: Scientific/Engineering :: Bio-Informatics'
+    'Topic :: Scientific/Engineering :: Bio-Informatics',
 ]
 INSTALL_REQUIRES = [
     'pybel>=0.12.0<0.13.0',
@@ -44,10 +43,11 @@ TESTS_REQUIRE = [
 ENTRY_POINTS = {
     'bio2bel': [
         'hgnc = bio2bel_hgnc',
+        'hgncgenefamily = bio2bel_hgnc.gfam_manager',
     ],
     'console_scripts': [
         'bio2bel_hgnc = bio2bel_hgnc.cli:main',
-        'bio2bel_gfam = bio2bel_hgnc.gfam_manager:main',
+        'bio2bel_hgncgenefamily = bio2bel_hgnc.gfam_manager:main',
     ]
 }
 
