@@ -23,18 +23,15 @@ __all__ = [
 class Manager(AbstractManager, BELNamespaceManagerMixin, BaseManager):
     """Bio2BEL HGNC Manager."""
 
-    module_name = 'gfam'
-    namespace_model = GeneFamily
+    _base = Base
+    module_name = 'hgncgenefamily'
 
+    namespace_model = GeneFamily
     identifiers_reccommended = 'HGNC gene family'
     identifiers_pattern = '^\d+$'
     identifiers_miriam = 'MIR:00000573'
     identifiers_namespace = 'hgnc.genefamily'
     identifiers_url = 'http://identifiers.org/hgnc.genefamily/'
-
-    @property
-    def _base(self):
-        return Base
 
     def populate(self, *args, **kwargs):  # noqa: D102
         raise NotImplementedError
@@ -45,7 +42,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, BaseManager):
 
     def _create_namespace_entry_from_model(self, gene_family: GeneFamily, namespace: Namespace) -> NamespaceEntry:
         return NamespaceEntry(
-            encoding='GRP',
+            encoding=self._get_encoding(gene_family),
             identifier=str(gene_family.family_identifier),
             name=gene_family.family_name,
             namespace=namespace,
@@ -53,6 +50,9 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, BaseManager):
 
     def _get_identifier(self, gene_family: GeneFamily) -> str:
         return str(gene_family.family_identifier)
+
+    def _get_encoding(self, gene_family: GeneFamily) -> str:
+        return 'GRP'
 
     def add_namespace_to_graph(self, graph: BELGraph):
         """Add this manager's namespace to the graph."""

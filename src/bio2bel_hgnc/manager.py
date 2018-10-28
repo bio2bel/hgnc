@@ -17,7 +17,7 @@ from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
 from pybel import BELGraph
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, MIRNA, NAME, NAMESPACE, PROTEIN, RNA, VARIANTS
 from pybel.dsl import BaseEntity, CentralDogma, FUNC_TO_DSL, rna as rna_dsl
-from pybel.manager.models import NamespaceEntry
+from pybel.manager.models import Namespace, NamespaceEntry
 from .constants import ENCODINGS, ENTREZ, MODULE_NAME
 from .gfam_manager import Manager as GfamManager
 from .model_utils import add_central_dogma, family_to_bel, gene_to_bel, uniprot_to_bel
@@ -441,6 +441,11 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         """Get the identifier from a human gene SQLAlchemy model."""
         return str(human_gene.identifier)
 
+    @staticmethod
+    def _get_encoding(human_gene: HumanGene) -> str:
+        """Get the BEL encoding for a Human gene."""
+        return ENCODINGS.get(human_gene.locus_type, 'GRP')
+    
     def build_entrez_id_symbol_mapping(self) -> Mapping[str, str]:
         """Build a mapping from Entrez gene identifier to HGNC gene symbols."""
         return dict(self.session.query(HumanGene.entrez, HumanGene.symbol).all())
@@ -608,9 +613,9 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
             graph.add_translation(rna, protein)
             return protein
 
-    def _create_namespace_entry_from_model(self, human_gene, namespace):
+    def _create_namespace_entry_from_model(self, human_gene: HumanGene, namespace: Namespace)->NamespaceEntry:
         return NamespaceEntry(
-            encoding=ENCODINGS.get(human_gene.locus_type, 'GRP'),
+            encoding=self._get_encoding(human_gene),
             identifier=human_gene.identifier,
             name=human_gene.symbol,
             namespace=namespace
