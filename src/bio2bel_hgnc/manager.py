@@ -57,7 +57,7 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
 
     namespace_model = HumanGene
     identifiers_recommended = 'HGNC'
-    identifiers_pattern = '^((HGNC|hgnc):)?\d{1,5}$'
+    identifiers_pattern = r'^((HGNC|hgnc):)?\d{1,5}$'
     identifiers_miriam = 'MIR:00000080'
     identifiers_namespace = 'hgnc'
     identifiers_url = 'http://identifiers.org/hgnc/'
@@ -89,11 +89,11 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
 
     #: Clobber this PyHGNC function so it doesn't accidentally get called
     def db_import(self, silent=False, hgnc_file_path=None, hcop_file_path=None, low_memory=False):  # noqa: D102
-        raise NotImplemented('call manager.populate instead')
+        raise NotImplementedError('call manager.populate instead')
 
     #: Clobber this PyHGNC function so it doesn't accidentally get called
     def _drop_tables(self):  # noqa: D102
-        raise NotImplemented('call manager.drop_all instead')
+        raise NotImplementedError('call manager.drop_all instead')
 
     #####################
     # Summary Functions #
@@ -445,7 +445,7 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
     def _get_encoding(human_gene: HumanGene) -> str:
         """Get the BEL encoding for a Human gene."""
         return ENCODINGS.get(human_gene.locus_type, 'GRP')
-    
+
     def build_entrez_id_symbol_mapping(self) -> Mapping[str, str]:
         """Build a mapping from Entrez gene identifier to HGNC gene symbols."""
         return dict(self.session.query(HumanGene.entrez, HumanGene.symbol).all())

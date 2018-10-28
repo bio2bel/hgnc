@@ -28,7 +28,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, BaseManager):
 
     namespace_model = GeneFamily
     identifiers_reccommended = 'HGNC gene family'
-    identifiers_pattern = '^\d+$'
+    identifiers_pattern = r'^\d+$'
     identifiers_miriam = 'MIR:00000573'
     identifiers_namespace = 'hgnc.genefamily'
     identifiers_url = 'http://identifiers.org/hgnc.genefamily/'
