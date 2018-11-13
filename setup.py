@@ -24,8 +24,8 @@ CLASSIFIERS = [
     'Topic :: Scientific/Engineering :: Bio-Informatics',
 ]
 INSTALL_REQUIRES = [
-    'pybel>=0.12.0<0.13.0',
-    'bio2bel>=0.1.1',
+    'pybel>=0.12.0,<0.13.0',
+    'bio2bel>=0.2.0,<0.3.0',
     'tqdm',
     'sqlalchemy',
     'click',
@@ -36,6 +36,14 @@ EXTRAS_REQUIRE = {
         'flask',
         'flask_admin',
     ],
+    'docs': [
+        'flask',
+        'flask_admin',
+        'sphinx',
+        'sphinx-rtd-theme',
+        'sphinx-click',
+        'sphinx-autodoc-typehints',
+    ]
 }
 TESTS_REQUIRE = [
     'tox',

@@ -15,6 +15,7 @@ jobs:
     - env: TOXENV=flake8
     - env: TOXENV=pyroma
     - env: TOXENV=xenon
+    - env: TOXENV=pyroma
     # docs stage
     - stage: docs
       env: TOXENV=doc8
