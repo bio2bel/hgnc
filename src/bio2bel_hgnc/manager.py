@@ -229,12 +229,12 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         :param str alias_symbol: alias symbol
         :rtype: Optional[bio2bel_hgnc.models.HumanGene]
         """
-        query_result = self.session.query(AliasSymbol).filter(AliasSymbol.alias_symbol == alias_symbol).one_or_none()
+        query_result = self.session.query(AliasSymbol).filter(AliasSymbol.alias_symbol == alias_symbol).all()
 
         if not query_result:
             return None
 
-        return query_result.hgnc
+        return query_result[0].hgnc
 
     def get_node(self, node: BaseEntity) -> Optional[HumanGene]:
         """Get a node from the database, whether it has a HGNC, RGD, MGI, or EG identifier.
