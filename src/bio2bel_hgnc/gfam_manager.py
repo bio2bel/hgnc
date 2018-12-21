@@ -51,8 +51,23 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, BaseManager):
     def _get_identifier(self, gene_family: GeneFamily) -> str:
         return str(gene_family.family_identifier)
 
+    def _get_name(self, gene_family: GeneFamily) -> str:
+        return gene_family.family_name
+
     def _get_encoding(self, gene_family: GeneFamily) -> str:
         return 'GRP'
+
+    def _get_namespace_name_to_encoding(self, **kwargs) -> Mapping[str, str]:
+        return {
+            model.family_name: 'GRP'
+            for model in self._iterate_namespace_models(**kwargs)
+        }
+
+    def _get_namespace_identifier_to_encoding(self, **kwargs) -> Mapping[str, str]:
+        return {
+            str(model.family_identifier): 'GRP'
+            for model in self._iterate_namespace_models(**kwargs)
+        }
 
     def add_namespace_to_graph(self, graph: BELGraph):
         """Add this manager's namespace to the graph."""
