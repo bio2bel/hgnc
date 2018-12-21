@@ -24,7 +24,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, BaseManager):
     """Bio2BEL HGNC Manager."""
 
     _base = Base
-    module_name = 'hgncgenefamily'
+    module_name = 'hgnc.genefamily'
 
     namespace_model = GeneFamily
     identifiers_recommended = 'HGNC gene family'
