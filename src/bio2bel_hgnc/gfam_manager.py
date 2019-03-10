@@ -78,6 +78,9 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, BaseManager):
         """Summarize the database."""
         return dict(families=self._count_model(GeneFamily))
 
+    def normalize_families(self, graph: BELGraph) -> None:
+        raise NotImplementedError
+
 
 main = Manager.get_cli()
 
