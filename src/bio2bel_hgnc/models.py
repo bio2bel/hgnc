@@ -9,6 +9,7 @@ from pyhgnc.manager.models import AliasName, AliasSymbol, Base, Enzyme, GeneFami
 from pyhgnc.manager.models import HGNC as HumanGene  # noqa: N811
 from pyhgnc.manager.models import MGD as MouseGene  # noqa: N811
 from pyhgnc.manager.models import RGD as RatGene  # noqa: N811
+from pyhgnc.manager.models import hgnc_gene_family
 
 __all__ = [
     'AliasSymbol',
@@ -20,4 +21,5 @@ __all__ = [
     'MouseGene',
     'RatGene',
     'UniProt',
+    'hgnc_gene_family',
 ]

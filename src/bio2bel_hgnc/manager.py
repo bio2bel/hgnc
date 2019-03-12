@@ -21,7 +21,10 @@ from pybel.manager.models import Namespace, NamespaceEntry
 from .constants import ENCODINGS, ENTREZ, MODULE_NAME
 from .gfam_manager import Manager as GfamManager
 from .model_utils import add_central_dogma, family_to_bel, gene_to_bel, uniprot_to_bel
-from .models import AliasName, AliasSymbol, Base, Enzyme, GeneFamily, HumanGene, MouseGene, RatGene, UniProt
+from .models import (
+    AliasName, AliasSymbol, Base, Enzyme, GeneFamily, HumanGene, MouseGene, RatGene, UniProt,
+    hgnc_gene_family,
+)
 from .wrapper import BaseManager
 
 log = logging.getLogger(__name__)
@@ -56,6 +59,7 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
     module_name = MODULE_NAME
 
     namespace_model = HumanGene
+    edge_model = hgnc_gene_family
     identifiers_recommended = 'HGNC'
     identifiers_pattern = r'^((HGNC|hgnc):)?\d{1,5}$'
     identifiers_miriam = 'MIR:00000080'
@@ -613,7 +617,7 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
             graph.add_translation(rna, protein)
             return protein
 
-    def _create_namespace_entry_from_model(self, human_gene: HumanGene, namespace: Namespace)->NamespaceEntry:
+    def _create_namespace_entry_from_model(self, human_gene: HumanGene, namespace: Namespace) -> NamespaceEntry:
         return NamespaceEntry(
             encoding=self._get_encoding(human_gene),
             identifier=human_gene.identifier,
