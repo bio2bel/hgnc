@@ -10,8 +10,8 @@ from pyhgnc.manager.models import HGNC as HumanGene  # noqa: N811
 from pyhgnc.manager.models import MGD as MouseGene  # noqa: N811
 from pyhgnc.manager.models import RGD as RatGene  # noqa: N811
 from pyhgnc.manager.models import (
-    hgnc_gene_family as gene_gene_family,
     hgnc_enzyme as gene_enzyme,
+    hgnc_gene_family as gene_gene_family,
     hgnc_mgd as gene_mouse_gene,
     hgnc_rgd as gene_rat_gene,
 )

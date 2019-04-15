@@ -88,6 +88,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, BELManagerMixin, BaseMa
         )
 
     def normalize_families(self, graph: BELGraph) -> None:
+        """Normalize the families in the graph."""
         raise NotImplementedError
 
     def count_families(self) -> int:

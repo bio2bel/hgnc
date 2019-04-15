@@ -316,9 +316,6 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
 
     def normalize_genes(self, graph: BELGraph) -> None:
         """Add identifiers to all HGNC genes."""
-        for node in graph:
-            assert isinstance(node, BaseEntity), f'start issue {node}'
-
         mapping = {}
         for node_data, human_gene in list(self.iter_genes(graph)):
             mapping[node_data] = gene_to_bel(human_gene, func=node_data.function, variants=node_data.get(VARIANTS))
@@ -326,9 +323,6 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         # FIXME what about when an HGNC node appears in a fusion, complex, or composite?
 
         relabel_nodes(graph, mapping, copy=False)
-
-        for node in graph:
-            assert isinstance(node, BaseEntity), f'end issue {node}'
 
     def enrich_genes_with_equivalences(self, graph: BELGraph) -> None:
         """Enrich genes with their corresponding UniProt."""
