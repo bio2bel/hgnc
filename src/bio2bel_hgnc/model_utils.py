@@ -24,7 +24,7 @@ def gene_to_bel(human_gene: HumanGene, func: Optional[str] = None,
 
     rv = dsl(
         namespace=HGNC,
-        name=str(human_gene.symbol),
+        name=human_gene.symbol,
         identifier=str(human_gene.identifier),
     )
 

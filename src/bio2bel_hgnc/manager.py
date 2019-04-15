@@ -10,6 +10,7 @@ import click
 from networkx import relabel_nodes
 from tqdm import tqdm
 
+import pybel.dsl
 from bio2bel import AbstractManager
 from bio2bel.manager.bel_manager import BELManagerMixin
 from bio2bel.manager.flask_manager import FlaskMixin
@@ -22,8 +23,8 @@ from .constants import ENCODINGS, ENTREZ, MODULE_NAME
 from .gfam_manager import Manager as GfamManager
 from .model_utils import add_central_dogma, family_to_bel, gene_to_bel, uniprot_to_bel
 from .models import (
-    AliasName, AliasSymbol, Base, Enzyme, GeneFamily, HumanGene, MouseGene, RatGene, UniProt,
-    hgnc_gene_family,
+    AliasName, AliasSymbol, Base, Enzyme, GeneFamily, HumanGene, MouseGene, RatGene, UniProt, gene_enzyme,
+    gene_mouse_gene, gene_rat_gene,
 )
 from .wrapper import BaseManager
 
@@ -54,12 +55,12 @@ def _deal_with_nonsense(results):
 
 
 class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerMixin, BaseManager):
-    """Bio2BEL HGNC Manager."""
+    """Human gene nomenclature and orthologies to mouse and rat."""
 
     module_name = MODULE_NAME
 
     namespace_model = HumanGene
-    edge_model = hgnc_gene_family
+    edge_model = [gene_rat_gene, gene_enzyme, gene_mouse_gene]
     identifiers_recommended = 'HGNC'
     identifiers_pattern = r'^((HGNC|hgnc):)?\d{1,5}$'
     identifiers_miriam = 'MIR:00000080'
@@ -83,7 +84,7 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         """
         return 0 < self.count_human_genes()
 
-    def populate(self, silent=False, hgnc_file_path=None, use_hcop=True, hcop_file_path=None, low_memory=False):
+    def populate(self, silent=False, hgnc_file_path=None, use_hcop=False, hcop_file_path=None, low_memory=False):
         """Populate the database."""
         json_data = self.load_hgnc_json(hgnc_file_path=hgnc_file_path)
         self.insert_hgnc(hgnc_dict=json_data, silent=silent, low_memory=low_memory)
@@ -103,43 +104,40 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
     # Summary Functions #
     #####################
 
-    def count_human_genes(self):
+    def count_human_genes(self) -> int:
         """Count the number of human genes in the database."""
         return self._count_model(HumanGene)
 
-    def count_families(self):
+    def count_families(self) -> int:
         """Count the number of human gene families in the database."""
         return self._count_model(GeneFamily)
 
-    def count_mouse_genes(self):
+    def count_mouse_genes(self) -> int:
         """Count the number of mouse genes in the database."""
         return self._count_model(MouseGene)
 
-    def count_rat_genes(self):
+    def count_rat_genes(self) -> int:
         """Count the number of rat genes in the database."""
         return self._count_model(RatGene)
 
-    def count_uniprots(self):
+    def count_proteins(self) -> int:
         """Count the number of UniProt proteins in the database."""
         return self._count_model(UniProt)
 
-    def summarize(self):
-        """Summarize the database.
-
-        :rtype: dict[str,int]
-        """
+    def summarize(self) -> Mapping[str, int]:
+        """Summarize the database."""
         return dict(
             human_genes=self.count_human_genes(),
             rat_genes=self.count_rat_genes(),
             mouse_genes=self.count_mouse_genes(),
             families=self.count_families(),
-            uniprots=self.count_uniprots()
+            proteins=self.count_proteins(),
         )
 
     def get_gene_by_hgnc_symbol(self, hgnc_symbol: str) -> Optional[HumanGene]:
         """Get a human gene by HGNC symbol.
 
-        :param str hgnc_symbol: The HGNC gene symbol
+        :param hgnc_symbol: The HGNC gene symbol
         """
         results = self.hgnc(symbol=hgnc_symbol)
         return _deal_with_nonsense(results)
@@ -147,43 +145,38 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
     def get_gene_by_hgnc_id(self, hgnc_id: str) -> Optional[HumanGene]:
         """Get a human gene by HGNC identifier.
 
-        :param str hgnc_id: The HGNC gene identifier
-        :rtype: Optional[bio2bel_hgnc.models.HumanGene]
+        :param hgnc_id: The HGNC gene identifier
         """
         results = self.hgnc(identifier=int(hgnc_id))  # it's actually an integer in the database
         return _deal_with_nonsense(results)
 
-    def get_gene_by_entrez_id(self, entrez_id):
+    def get_gene_by_entrez_id(self, entrez_id: str) -> Optional[HumanGene]:
         """Get a human gene by its Entrez gene identifier.
 
-        :param str entrez_id: The Entrez gene identifier
-        :rtype: Optional[bio2bel_hgnc.models.HumanGene]
+        :param entrez_id: The Entrez gene identifier
         """
         results = self.hgnc(entrez=entrez_id)
         return _deal_with_nonsense(results)
 
-    def get_gene_by_ensembl_id(self, ensembl_id):
+    def get_gene_by_ensembl_id(self, ensembl_id: str) -> Optional[HumanGene]:
         """Get a human gene by its ENSEMBL gene identifier.
 
-        :param str ensembl_id: The ENSEMBL gene identifier
-        :rtype: Optional[bio2bel_hgnc.models.HumanGene]
+        :param ensembl_id: The ENSEMBL gene identifier
         """
         results = self.hgnc(ensembl_gene=ensembl_id)
         return _deal_with_nonsense(results)
 
-    def get_gene_by_uniprot_id(self, uniprot_id):
+    def get_gene_by_uniprot_id(self, uniprot_id: str) -> Optional[HumanGene]:
         """Get a human gene by its UniProt gene identifier.
 
-        :param str uniprot_id: The UniProt gene identifier
-        :rtype: Optional[bio2bel_hgnc.models.HumanGene]
+        :param uniprot_id: The UniProt gene identifier
         """
         return self.hgnc(uniprotid=uniprot_id)
 
-    def get_gene_by_mgi_id(self, mgi_id):
+    def get_gene_by_mgi_id(self, mgi_id: str) -> Optional[HumanGene]:
         """Get a human gene by an orthologous MGI identifier.
 
-        :param str mgi_id: MGI identifier
-        :rtype: Optional[bio2bel_hgnc.models.HumanGene]
+        :param mgi_id: MGI identifier
         """
         results = self.mgd(mgdid=mgi_id)
         mouse_gene = _deal_with_nonsense(results)
@@ -199,11 +192,10 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
 
         return human_genes[0]
 
-    def get_gene_by_rgd_id(self, rgd_id):
+    def get_gene_by_rgd_id(self, rgd_id: str) -> Optional[HumanGene]:
         """Get a human gene by an orthologous RGD identifier.
 
-        :param str rgd_id: RGD identifier
-        :rtype: Optional[bio2bel_hgnc.models.HumanGene]
+        :param rgd_id: RGD identifier
         """
         results = self.rgd(rgdid=rgd_id)
         rat_gene = _deal_with_nonsense(results)
@@ -219,19 +211,17 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
 
         return human_genes[0]
 
-    def get_enzyme_by_ec_number(self, ec_number):
+    def get_enzyme_by_ec_number(self, ec_number: str) -> Optional[HumanGene]:
         """Get a enzyme by its associated EC number.
 
-        :param str ec_number: EC number
-        :rtype: Optional[bio2bel_hgnc.models.HumanGene]
+        :param ec_number: EC number
         """
         return self.session.query(Enzyme).filter(Enzyme.ec_number == ec_number).one_or_none()
 
-    def get_hgnc_from_alias_symbol(self, alias_symbol):
+    def get_hgnc_from_alias_symbol(self, alias_symbol: str) -> Optional[HumanGene]:
         """Get HGNC from alias symbol.
 
-        :param str alias_symbol: alias symbol
-        :rtype: Optional[bio2bel_hgnc.models.HumanGene]
+        :param alias_symbol: alias symbol
         """
         query_result = self.session.query(AliasSymbol).filter(AliasSymbol.alias_symbol == alias_symbol).all()
 
@@ -299,12 +289,12 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
             return
         raise KeyError
 
-    def _get_node_handle_mgiid(self, identifier, name):
+    def _get_node_handle_mgiid(self, _, name):
         if name is None:
             raise KeyError
         return self.get_gene_by_mgi_id(name)
 
-    def _get_node_handle_rgdid(self, identifier, name):
+    def _get_node_handle_rgdid(self, _, name):
         if name is None:
             raise KeyError
         return self.get_gene_by_rgd_id(name)
@@ -503,21 +493,15 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
             for hgnc_id, uniprot_id in self.session.query(HumanGene.identifier, UniProt.uniprotid).all()
         }
 
-    def build_uniprot_id_hgnc_id_mapping(self):
-        """Build a mapping from UniProt identifiers to HGNC identifiers.
-
-        :rtype: dict[str,str]
-        """
+    def build_uniprot_id_hgnc_id_mapping(self) -> Mapping[str, str]:
+        """Build a mapping from UniProt identifiers to HGNC identifiers."""
         return {
             uniprot_id: hgnc_id
             for hgnc_id, uniprot_id in self.session.query(HumanGene.identifier, UniProt.uniprotid).all()
         }
 
-    def build_uniprot_id_hgnc_symbol_mapping(self):
-        """Build a mapping from UniProt identifiers to HGNC gene symbols.
-
-        :rtype: dict[str,str]
-        """
+    def build_uniprot_id_hgnc_symbol_mapping(self) -> Mapping[str, str]:
+        """Build a mapping from UniProt identifiers to HGNC gene symbols."""
         return {
             uniprot_id: symbol
             for symbol, uniprot_id in self.session.query(HumanGene.symbol, UniProt.uniprotid).all()
@@ -566,8 +550,18 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
 
         for human_gene in tqdm(self.list_human_genes(), total=self.count_human_genes(),
                                desc='Mapping central dogma to BEL'):
-            graph.add_node_from_data(gene_to_bel(human_gene))
+            gene_dsl = gene_to_bel(human_gene)
+            graph.add_node_from_data(gene_dsl)
             add_central_dogma(graph, human_gene)
+
+            for mouse_gene in human_gene.mgds:
+                graph.add_orthology(gene_dsl, pybel.dsl.Gene('mgi', identifier=str(mouse_gene.mgdid)))
+            for rat_gene in human_gene.rgds:
+                graph.add_orthology(gene_dsl, pybel.dsl.Gene('rgd', identifier=str(rat_gene.rgdid)))
+
+            protein_dsl = gene_to_bel(human_gene, PROTEIN)
+            for enzyme in human_gene.enzymes:
+                graph.add_is_a(protein_dsl, pybel.dsl.Protein('ec-code', enzyme.ec_number))
 
         for family in tqdm(self.list_families(), total=self.count_families(),
                            desc='Mapping gene family definitions to BEL'):

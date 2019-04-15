@@ -3,30 +3,37 @@
 """Bio2BEL HGNC Gene Family Manager."""
 
 import logging
-from typing import Mapping
+from typing import List, Mapping
+
+from tqdm import tqdm
 
 from bio2bel import AbstractManager
+from bio2bel.manager.bel_manager import BELManagerMixin
 from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
 from pybel import BELGraph
 from pybel.manager.models import Namespace, NamespaceEntry
-from .models import Base, GeneFamily
+from .model_utils import family_to_bel, gene_to_bel
+from .models import (
+    Base, GeneFamily, gene_gene_family,
+)
 from .wrapper import BaseManager
-
-log = logging.getLogger(__name__)
 
 __all__ = [
     'Manager',
     'main',
 ]
 
+log = logging.getLogger(__name__)
 
-class Manager(AbstractManager, BELNamespaceManagerMixin, BaseManager):
-    """Bio2BEL HGNC Manager."""
+
+class Manager(AbstractManager, BELNamespaceManagerMixin, BELManagerMixin, BaseManager):
+    """Human gene-gene family memberships."""
 
     _base = Base
     module_name = 'hgnc.genefamily'
 
     namespace_model = GeneFamily
+    edge_model = gene_gene_family
     identifiers_recommended = 'HGNC gene family'
     identifiers_pattern = r'^\d+$'
     identifiers_miriam = 'MIR:00000573'
@@ -76,10 +83,34 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, BaseManager):
 
     def summarize(self) -> Mapping[str, int]:
         """Summarize the database."""
-        return dict(families=self._count_model(GeneFamily))
+        return dict(
+            families=self.count_families(),
+        )
 
     def normalize_families(self, graph: BELGraph) -> None:
         raise NotImplementedError
+
+    def count_families(self) -> int:
+        """Count all gene families."""
+        return self._count_model(GeneFamily)
+
+    def list_families(self) -> List[GeneFamily]:
+        """List all gene families."""
+        return self._list_model(GeneFamily)
+
+    def to_bel(self) -> BELGraph:
+        """Export gene family definitions as a BEL graph."""
+        graph = BELGraph(
+            name='HGNC Gene Family Memberships',
+            version='1.0.0'
+        )
+
+        for family in tqdm(self.list_families(), total=self.count_families(),
+                           desc='Mapping gene family definitions to BEL'):
+            for human_gene in family.hgncs:
+                graph.add_is_a(gene_to_bel(human_gene), family_to_bel(family))
+
+        return graph
 
 
 main = Manager.get_cli()
