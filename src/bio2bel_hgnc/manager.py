@@ -58,6 +58,7 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
     """Human gene nomenclature and orthologies to mouse and rat."""
 
     module_name = MODULE_NAME
+    _base = Base
 
     namespace_model = HumanGene
     edge_model = [gene_rat_gene, gene_enzyme, gene_mouse_gene]
@@ -73,15 +74,8 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         super().__init__(*args, **kwargs)
         self._hgnc_symbol_entrez_id_mapping = {}
 
-    @property
-    def _base(self):
-        return Base
-
-    def is_populated(self):
-        """Check if the database is already populated.
-
-        :rtype: bool
-        """
+    def is_populated(self) -> bool:
+        """Check if the database is already populated."""
         return 0 < self.count_human_genes()
 
     def populate(self, silent=False, hgnc_file_path=None, use_hcop=False, hcop_file_path=None, low_memory=False):
