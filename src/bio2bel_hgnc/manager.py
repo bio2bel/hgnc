@@ -301,17 +301,22 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         gfam_manager = GfamManager(engine=self.engine, session=self.session)
         gfam_manager.add_namespace_to_graph(graph)
 
-    def iter_genes(self, graph: BELGraph) -> Iterable[Tuple[BaseEntity, HumanGene]]:
+    def iter_genes(self, graph: BELGraph, use_tqdm: bool = False) -> Iterable[Tuple[BaseEntity, HumanGene]]:
         """Iterate over pairs of BEL nodes and HGNC genes."""
-        for node in graph:
+        if use_tqdm:
+            it = tqdm(graph, desc='HGNC Genes')
+        else:
+            it = graph
+
+        for node in it:
             human_gene = self.get_node(node)
             if human_gene is not None:
                 yield node, human_gene
 
-    def normalize_genes(self, graph: BELGraph) -> None:
+    def normalize_genes(self, graph: BELGraph, use_tqdm: bool = False) -> None:
         """Add identifiers to all HGNC genes."""
         mapping = {}
-        for node_data, human_gene in list(self.iter_genes(graph)):
+        for node_data, human_gene in list(self.iter_genes(graph, use_tqdm=use_tqdm)):
             mapping[node_data] = gene_to_bel(human_gene, func=node_data.function, variants=node_data.get(VARIANTS))
 
         # FIXME what about when an HGNC node appears in a fusion, complex, or composite?
