@@ -435,7 +435,17 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
 
     def build_entrez_id_symbol_mapping(self) -> Mapping[str, str]:
         """Build a mapping from Entrez gene identifier to HGNC gene symbols."""
-        return dict(self.session.query(HumanGene.entrez, HumanGene.symbol).all())
+        return {
+            str(entrez_id): str(hgnc_id)
+            for entrez_id, hgnc_id in self.session.query(HumanGene.entrez, HumanGene.symbol).all()
+        }
+
+    def build_entrez_id_hgnc_id_mapping(self) -> Mapping[str, str]:
+        """Build a mapping from Entrez gene identifier to HGNC identifier."""
+        return {
+            str(entrez_id): str(hgnc_id)
+            for entrez_id, hgnc_id in self.session.query(HumanGene.entrez, HumanGene.identifier).all()
+        }
 
     @property
     def hgnc_symbol_entrez_id_mapping(self) -> Mapping[str, str]:
