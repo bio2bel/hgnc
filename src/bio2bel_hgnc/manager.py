@@ -436,11 +436,11 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
     def build_entrez_id_symbol_mapping(self) -> Mapping[str, str]:
         """Build a mapping from Entrez gene identifier to HGNC gene symbols."""
         return {
-            str(entrez_id): str(hgnc_id)
-            for entrez_id, hgnc_id in self.session.query(HumanGene.entrez, HumanGene.symbol).all()
+            str(entrez_id): hgnc_symbol
+            for entrez_id, hgnc_symbol in self.session.query(HumanGene.entrez, HumanGene.symbol).all()
         }
 
-    def build_entrez_id_hgnc_id_mapping(self) -> Mapping[str, str]:
+    def build_entrez_id_to_hgnc_id_mapping(self) -> Mapping[str, str]:
         """Build a mapping from Entrez gene identifier to HGNC identifier."""
         return {
             str(entrez_id): str(hgnc_id)
@@ -458,48 +458,28 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
     def build_hgnc_symbol_entrez_id_mapping(self) -> Mapping[str, str]:
         """Build a mapping from HGNC symbol to ENTREZ identifier."""
         return {
-            symbol: identifier
-            for symbol, identifier in self.session.query(HumanGene.symbol, HumanGene.entrez).all()
+            hgnc_symbol: str(entrez_id)
+            for hgnc_symbol, entrez_id in self.session.query(HumanGene.symbol, HumanGene.entrez).all()
         }
 
     def build_hgnc_id_symbol_mapping(self) -> Mapping[str, str]:
         """Build a mapping from HGNC identifiers to HGNC gene symbols."""
         return {
-            str(identifier): symbol
-            for identifier, symbol in self.session.query(HumanGene.identifier, HumanGene.symbol).all()
+            str(hgnc_id): hgnc_symbol
+            for hgnc_id, hgnc_symbol in self.session.query(HumanGene.identifier, HumanGene.symbol).all()
         }
 
     def build_hgnc_symbol_id_mapping(self) -> Mapping[str, str]:
         """Build a mapping from HGNC gene symbols to HGNC identifiers."""
         return {
-            symbol: str(identifier)
-            for symbol, identifier in self.session.query(HumanGene.symbol, HumanGene.identifier).all()
-        }
-
-    def build_hgnc_symbol_uniprot_ids_mapping(self):
-        """Build a mapping from HGNC gene symbols to UniProt identifiers.
-
-        :rtype: dict[str,set[str]]
-        """
-        return {
-            symbol: uniprot_id
-            for symbol, uniprot_id in self.session.query(HumanGene.symbol, UniProt.uniprotid).all()
-        }
-
-    def build_hgnc_id_uniprot_ids_mapping(self):
-        """Build a mapping from HGNC identifier to UniProt identifiers.
-
-        :rtype: dict[str,set[str]]
-        """
-        return {
-            hgnc_id: uniprot_id
-            for hgnc_id, uniprot_id in self.session.query(HumanGene.identifier, UniProt.uniprotid).all()
+            hgnc_symbol: str(hgnc_id)
+            for hgnc_symbol, hgnc_id in self.session.query(HumanGene.symbol, HumanGene.identifier).all()
         }
 
     def build_uniprot_id_hgnc_id_mapping(self) -> Mapping[str, str]:
         """Build a mapping from UniProt identifiers to HGNC identifiers."""
         return {
-            uniprot_id: hgnc_id
+            uniprot_id: str(hgnc_id)
             for hgnc_id, uniprot_id in self.session.query(HumanGene.identifier, UniProt.uniprotid).all()
         }
 
