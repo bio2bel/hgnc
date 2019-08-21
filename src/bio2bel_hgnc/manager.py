@@ -433,7 +433,7 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         """Get the BEL encoding for a Human gene."""
         return ENCODINGS.get(human_gene.locus_type, 'GRP')
 
-    def build_entrez_id_symbol_mapping(self) -> Mapping[str, str]:
+    def build_entrez_id_to_hgnc_symbol_mapping(self) -> Mapping[str, str]:
         """Build a mapping from Entrez gene identifier to HGNC gene symbols."""
         return {
             str(entrez_id): hgnc_symbol
