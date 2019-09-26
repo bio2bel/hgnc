@@ -243,17 +243,17 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         if namespace.lower() in {'entrez', 'egid', 'eg', 'ncbigene'}:
             return self._get_node_handle_entrez(identifier, name)
 
-        if namespace.lower() in {'mgi'}:
-            return self._get_node_handle_mgi(identifier, name)
-
-        if namespace.lower() == 'mgiid':
-            return self._get_node_handle_mgiid(identifier, name)
-
-        if namespace.lower() in {'rgd'}:
-            return self._get_node_handle_rgd(identifier, name)
-
-        if namespace.lower() in {'rgdid'}:
-            return self._get_node_handle_rgdid(identifier, name)
+        # if namespace.lower() in {'mgi'}:
+        #     return self._get_node_handle_mgi(identifier, name)
+        #
+        # if namespace.lower() == 'mgiid':
+        #     return self._get_node_handle_mgiid(identifier, name)
+        #
+        # if namespace.lower() in {'rgd'}:
+        #     return self._get_node_handle_rgd(identifier, name)
+        #
+        # if namespace.lower() in {'rgdid'}:
+        #     return self._get_node_handle_rgdid(identifier, name)
 
     def _get_node_handle_hgnc(self, identifier, name) -> Optional[HumanGene]:
         if identifier is not None:
