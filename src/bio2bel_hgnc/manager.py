@@ -16,7 +16,7 @@ from bio2bel.manager.bel_manager import BELManagerMixin
 from bio2bel.manager.flask_manager import FlaskMixin
 from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
 from pybel import BELGraph
-from pybel.constants import FUNCTION, GENE, IDENTIFIER, MIRNA, NAME, NAMESPACE, PROTEIN, RNA, VARIANTS
+from pybel.constants import FUNCTION, MIRNA, NAME, NAMESPACE, PROTEIN, RNA, VARIANTS
 from pybel.dsl import BaseEntity, CentralDogma, FUNC_TO_DSL, rna as rna_dsl
 from pybel.manager.models import Namespace, NamespaceEntry
 from .constants import ENCODINGS, ENTREZ, MODULE_NAME
@@ -28,14 +28,13 @@ from .models import (
 )
 from .wrapper import BaseManager
 
-log = logging.getLogger(__name__)
-
 __all__ = [
     'Manager',
 ]
 
-UNIPROT_RE = r'^([A-N,R-Z][0-9]([A-Z][A-Z, 0-9][A-Z, 0-9][0-9]){1,2})|([O,P,Q][0-9][A-Z, 0-9][A-Z, 0-9][A-Z, 0-9][0-9])(\.\d+)?$'
+logger = logging.getLogger(__name__)
 
+UNIPROT_RE = r'^([A-N,R-Z][0-9]([A-Z][A-Z, 0-9][A-Z, 0-9][0-9]){1,2})|([O,P,Q][0-9][A-Z, 0-9][A-Z, 0-9][A-Z, 0-9][0-9])(\.\d+)?$'
 GENE_FAMILY_NAMESPACES = {'gfam', 'hgnc.family', 'hgnc.genefamily'}
 
 
@@ -181,7 +180,7 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         human_genes = mouse_gene.hgncs
 
         if len(human_genes) > 1:
-            log.warning('multiple human genes mapped to mgi_id:%s: %s', mgi_id, human_genes)
+            logger.warning('multiple human genes mapped to mgi_id:%s: %s', mgi_id, human_genes)
             return
 
         return human_genes[0]
@@ -200,7 +199,7 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         human_genes = rat_gene.hgncs
 
         if len(human_genes) > 1:
-            log.warning('multiple human genes mapped to rgd_id:%s: %s', rgd_id, human_genes)
+            logger.warning('multiple human genes mapped to rgd_id:%s: %s', rgd_id, human_genes)
             return
 
         return human_genes[0]
@@ -230,12 +229,15 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         :param node: The node to look for
         :raises: KeyError
         """
-        if NAMESPACE not in node:
+        if not isinstance(node, CentralDogma):
             return
 
-        namespace = node[NAMESPACE]
-        identifier = node.get(IDENTIFIER)
-        name = node.get(NAME)
+        namespace = node.namespace
+        if namespace is None:
+            return
+
+        identifier = node.identifier
+        name = node.name
 
         if namespace.lower() in {'hgnc'}:
             return self._get_node_handle_hgnc(identifier, name)
@@ -325,26 +327,22 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
 
     def enrich_genes_with_equivalences(self, graph: BELGraph) -> None:
         """Enrich genes with their corresponding UniProt."""
-        self.add_namespace_to_graph(graph)
-
-        if 'uniprot' not in graph.namespace_url:
-            graph.namespace_pattern['uniprot'] = UNIPROT_RE
-
         for node, human_gene in list(self.iter_genes(graph)):
             func = node.function
 
             if human_gene.entrez:
-                graph.add_equivalence(node, FUNC_TO_DSL[func](
+                entrez_node = FUNC_TO_DSL[func](
                     namespace=ENTREZ,
                     name=human_gene.symbol,
                     identifier=str(human_gene.entrez)
-                ))
+                )
+                graph.add_equivalence(node, entrez_node)
 
-            if func in {PROTEIN, RNA, GENE}:
+            if func == PROTEIN:
                 for uniprot in human_gene.uniprots:
                     graph.add_equivalence(node, uniprot_to_bel(uniprot))
 
-            if func in {RNA, GENE}:
+            if func == RNA:
                 if human_gene.mirbase:
                     mirbase_rna_node = rna_dsl(
                         namespace='mirbase',
@@ -397,21 +395,25 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         self.add_namespace_to_graph(graph)
 
         for gene_family_node in list(graph):
-            if gene_family_node[FUNCTION] != GENE:
+            if not isinstance(gene_family_node, pybel.dsl.Gene):
                 continue
 
-            if gene_family_node.get(NAMESPACE).lower() not in GENE_FAMILY_NAMESPACES:
+            namespace = gene_family_node.namespace
+            if namespace is None or namespace.lower() not in GENE_FAMILY_NAMESPACES:
                 continue
 
-            if IDENTIFIER in gene_family_node:
-                gene_family_model = self.get_family_by_id(gene_family_node[IDENTIFIER])
-            elif NAME in gene_family_node:
-                gene_family_model = self.get_family_by_name(gene_family_node[NAME])
+            identifier = gene_family_node.identifier
+            name = gene_family_node.name
+
+            if identifier:
+                gene_family_model = self.get_family_by_id(identifier)
+            elif name:
+                gene_family_model = self.get_family_by_name(name)
             else:
                 raise ValueError
 
             if gene_family_model is None:
-                log.info('family not found: %s', gene_family_node)
+                logger.info('family not found: %s', gene_family_node)
                 continue
 
             for human_gene in gene_family_model.hgncs:
@@ -523,12 +525,12 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         )
 
         hgnc_namespace = self.upload_bel_namespace()
-        log.info('using default namespace: %s at %s', hgnc_namespace, hgnc_namespace.url)
+        logger.info('using default namespace: %s at %s', hgnc_namespace, hgnc_namespace.url)
         graph.namespace_url[hgnc_namespace.keyword] = hgnc_namespace.url
 
         gfam_manager = GfamManager(connection=self.connection)
         gfam_namespace = gfam_manager.upload_bel_namespace()
-        log.info('using default namespace: %s at %s', gfam_namespace, gfam_namespace.url)
+        logger.info('using default namespace: %s at %s', gfam_namespace, gfam_namespace.url)
         graph.namespace_url[gfam_namespace.keyword] = gfam_namespace.url
 
         for human_gene in tqdm(self.list_human_genes(), total=self.count_human_genes(),
@@ -613,9 +615,9 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
         def populate(manager, reset, skip_hcop):
             """Populate the database."""
             if reset:
-                log.info('Deleting the previous instance of the database')
+                logger.info('Deleting the previous instance of the database')
                 manager.drop_all()
-                log.info('Creating new models')
+                logger.info('Creating new models')
                 manager.create_all()
 
             manager.populate(use_hcop=(not skip_hcop))
