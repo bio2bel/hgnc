@@ -5,6 +5,7 @@
 import logging
 import unittest
 
+import pybel.dsl
 from bio2bel_hgnc import Manager
 from bio2bel_hgnc.constants import ENTREZ, HGNC, HGNC_GENE_FAMILY
 from bio2bel_hgnc.models import HumanGene
@@ -13,7 +14,7 @@ from pybel.constants import EQUIVALENT_TO, ORTHOLOGOUS, RELATION
 from pybel.dsl import gene, mirna, protein, rna
 from tests.cases import TemporaryCacheMixin
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 protein_hgnc_cd33 = protein(name='CD33', namespace=HGNC)
 gene_hgnc_cd33 = protein_hgnc_cd33.get_rna().get_gene()
@@ -74,20 +75,10 @@ class TestEnrich(TemporaryCacheMixin):
         cd33_model = self.manager.get_node(cd33_rgd_name)
         self.help_check_cd33_model(cd33_model)
 
-    def test_get_rgd_id_node(self):
-        """Test getting a node by RGD identifier."""
-        cd33_model = self.manager.get_node(cd33_rgd_id)
-        self.help_check_cd33_model(cd33_model)
-
     @unittest.skip('HGNC does not have MGI symbol information')
     def test_get_mgi_node(self):
         """Test getting a node by MGI name."""
         cd33_model = self.manager.get_node(cd33_mgi_name)
-        self.help_check_cd33_model(cd33_model)
-
-    def test_get_mgi_id_node(self):
-        """Test getting a node by MGI identifier."""
-        cd33_model = self.manager.get_node(cd33_mgi_identifier)
         self.help_check_cd33_model(cd33_model)
 
     def test_get_entrez_node(self):
@@ -97,11 +88,23 @@ class TestEnrich(TemporaryCacheMixin):
 
     def test_add_equivalency(self):
         """Test that CD33 identified by HGNC and entrez can be equivalenced."""
+        gene_model = self.manager.get_gene_by_hgnc_symbol('CD33')
+        self.assertIsNotNone(gene_model)
+        self.assertEqual('CD33', gene_model.symbol)
+        self.assertEqual('1659', str(gene_model.identifier))
+        self.assertEqual('945', gene_model.entrez)
+
         graph = BELGraph()
         graph.add_node_from_data(protein_hgnc_cd33)
 
         self.assertEqual(1, graph.number_of_nodes(), msg='wrong initial number of nodes')
         self.assertEqual(0, graph.number_of_edges(), msg='wrong initial number of edges')
+
+        genes = list(self.manager.iter_genes(graph))
+        self.assertEqual(1, len(genes))
+        e, m = genes[0]
+        self.assertIsInstance(e, pybel.dsl.Protein)
+        self.assertIsInstance(m, HumanGene)
 
         self.manager.enrich_genes_with_equivalences(graph)
 
