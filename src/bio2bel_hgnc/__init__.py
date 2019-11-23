@@ -13,7 +13,7 @@ __description__ = "A package for converting HGNC to BEL"
 __url__ = 'https://github.com/bio2bel/hgnc'
 
 __author__ = 'Charles Tapley Hoyt'
-__email__ = 'charles.hoyt@scai.fraunhofer.de'
+__email__ = 'cthoyt@gmail.com'
 
 __license__ = 'MIT License'
-__copyright__ = 'Copyright (c) 2017-2018 Charles Tapley Hoyt'
+__copyright__ = 'Copyright (c) 2017-2019 Charles Tapley Hoyt'

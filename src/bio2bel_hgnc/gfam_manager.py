@@ -13,9 +13,7 @@ from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
 from pybel import BELGraph
 from pybel.manager.models import Namespace, NamespaceEntry
 from .model_utils import family_to_bel, gene_to_bel
-from .models import (
-    Base, GeneFamily, gene_gene_family,
-)
+from .models import Base, GeneFamily, gene_gene_family
 from .wrapper import BaseManager
 
 __all__ = [

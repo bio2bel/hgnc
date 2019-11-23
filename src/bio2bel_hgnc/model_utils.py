@@ -17,8 +17,11 @@ __all__ = [
 ]
 
 
-def gene_to_bel(human_gene: HumanGene, func: Optional[str] = None,
-                variants: Optional[List[Variant]] = None) -> CentralDogma:
+def gene_to_bel(
+    human_gene: HumanGene,
+    func: Optional[str] = None,
+    variants: Optional[List[Variant]] = None,
+) -> CentralDogma:
     """Convert a Gene to a PyBEL gene."""
     dsl = FUNC_TO_DSL[func] if func else gene_dsl
 
@@ -34,8 +37,11 @@ def gene_to_bel(human_gene: HumanGene, func: Optional[str] = None,
     return rv
 
 
-def family_to_bel(family: GeneFamily, func: Optional[str] = None,
-                  variants: Optional[List[Variant]] = None) -> CentralDogma:
+def family_to_bel(
+    family: GeneFamily,
+    func: Optional[str] = None,
+    variants: Optional[List[Variant]] = None,
+) -> CentralDogma:
     """Convert a Gene Family model to a PyBEL gene."""
     dsl = FUNC_TO_DSL[func] if func else gene_dsl
 
