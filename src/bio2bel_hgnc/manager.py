@@ -4,7 +4,7 @@
 
 import logging
 from collections import Counter
-from typing import Iterable, List, Mapping, Optional, Set, Tuple
+from typing import Iterable, List, Mapping, Optional, Set, Tuple, TypeVar
 
 import click
 from networkx import relabel_nodes
@@ -17,7 +17,8 @@ from bio2bel.manager.flask_manager import FlaskMixin
 from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
 from pybel import BELGraph
 from pybel.constants import FUNCTION, MIRNA, NAME, NAMESPACE, PROTEIN, RNA, VARIANTS
-from pybel.dsl import BaseEntity, CentralDogma, FUNC_TO_DSL, rna as rna_dsl
+from pybel.dsl import BaseEntity, CentralDogma, FUNC_TO_DSL
+import pybel.dsl
 from pybel.manager.models import Namespace, NamespaceEntry
 from .constants import ENCODINGS, ENTREZ, MODULE_NAME
 from .gfam_manager import Manager as GfamManager
@@ -37,13 +38,11 @@ logger = logging.getLogger(__name__)
 UNIPROT_RE = r'^([A-N,R-Z][0-9]([A-Z][A-Z, 0-9][A-Z, 0-9][0-9]){1,2})|([O,P,Q][0-9][A-Z, 0-9][A-Z, 0-9][A-Z, 0-9][0-9])(\.\d+)?$'
 GENE_FAMILY_NAMESPACES = {'gfam', 'hgnc.family', 'hgnc.genefamily'}
 
+X = TypeVar('X')
 
-def _deal_with_nonsense(results):
-    """Fix lists that only have one thing inside them.
 
-    :param list[X] results:
-    :rtype: Optional[X]
-    """
+def _deal_with_nonsense(results: Optional[List[X]]) -> Optional[X]:
+    """Fix lists that only have one thing inside them."""
     if not results:
         return
 
@@ -164,7 +163,7 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
 
         :param uniprot_id: The UniProt gene identifier
         """
-        return self.hgnc(uniprotid=uniprot_id)
+        return _deal_with_nonsense(self.hgnc(uniprotid=uniprot_id))
 
     def get_gene_by_mgi_id(self, mgi_id: str) -> Optional[HumanGene]:
         """Get a human gene by an orthologous MGI identifier.
@@ -344,9 +343,9 @@ class Manager(AbstractManager, FlaskMixin, BELManagerMixin, BELNamespaceManagerM
 
             if func == RNA:
                 if human_gene.mirbase:
-                    mirbase_rna_node = rna_dsl(
+                    mirbase_rna_node = pybel.dsl.Rna(
                         namespace='mirbase',
-                        identifier=str(human_gene.mirbase)
+                        identifier=str(human_gene.mirbase),
                     )
                     graph.add_equivalence(node, mirbase_rna_node)
 
