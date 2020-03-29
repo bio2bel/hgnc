@@ -14,13 +14,13 @@ following code in your favorite terminal:
 
 .. code-block:: sh
 
-    $ python3 -m pip install bio2bel_hgnc
+    $ pip install bio2bel_hgnc
 
 or from the latest code on `GitHub <https://github.com/bio2bel/hgnc>`_ with:
 
 .. code-block:: sh
 
-    $ python3 -m pip install git+https://github.com/bio2bel/hgnc.git@master
+    $ python3 -m pip install git+https://github.com/bio2bel/hgnc.git
 
 Setup
 -----
@@ -45,10 +45,6 @@ Citations
 ---------
 - Gray KA, *et al*. `genenames.org: the HGNC resources in 2015 <http://www.ncbi.nlm.nih.gov/pubmed/25361968>`_. Nucleic
   Acids Res. 2015 Jan;43(Database issue):D1079-85
-
-Acknowledgements
-----------------
-- This package heavily relies on Andrej Konotopez's package `PyHGNC <https://github.com/lekono/pyhgnc>`_
 
 .. |build| image:: https://travis-ci.org/bio2bel/hgnc.svg?branch=master
     :target: https://travis-ci.org/bio2bel/hgnc

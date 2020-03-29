@@ -1,34 +1,119 @@
 # -*- coding: utf-8 -*-
 
-"""SQLAlchemy models for Bio2BEL HGNC.
+"""SQLAlchemy models for Bio2BEL HGNC."""
 
-Note: currently wraps models from :mod:`PyHGNC`.
-"""
+from __future__ import annotations
 
-from pyhgnc.manager.models import AliasName, AliasSymbol, Base, Enzyme, GeneFamily, UniProt
-from pyhgnc.manager.models import HGNC as HumanGene  # noqa: N811
-from pyhgnc.manager.models import MGD as MouseGene  # noqa: N811
-from pyhgnc.manager.models import RGD as RatGene  # noqa: N811
-from pyhgnc.manager.models import (
-    hgnc_enzyme as gene_enzyme,
-    hgnc_gene_family as gene_gene_family,
-    hgnc_mgd as gene_mouse_gene,
-    hgnc_rgd as gene_rat_gene,
-)
+from sqlalchemy import Column, ForeignKey, Integer, String, Table
+from sqlalchemy.ext.declarative import DeclarativeMeta, declarative_base
+from sqlalchemy.orm import relationship
 
+from bio2bel.compath import CompathPathwayMixin, CompathProteinMixin
+from .constants import MODULE_NAME
 
 __all__ = [
-    'AliasSymbol',
-    'AliasName',
     'Base',
-    'Enzyme',
     'GeneFamily',
     'HumanGene',
     'MouseGene',
     'RatGene',
-    'UniProt',
-    'gene_gene_family',
-    'gene_enzyme',
-    'gene_mouse_gene',
-    'gene_rat_gene',
+    'human_mouse',
+    'human_rat',
 ]
+
+HUMAN_GENE_TABLE_NAME = f'{MODULE_NAME}_humanGene'
+HUMAN_RAT_TABLE_NAME = f'{MODULE_NAME}_humanGene_ratGene'
+RAT_GENE_TABLE_NAME = f'{MODULE_NAME}_ratGene'
+HUMAN_MOUSE_TABLE_NAME = f'{MODULE_NAME}_humanGene_mouseGene'
+MOUSE_GENE_TABLE_NAME = f'{MODULE_NAME}_mouseGene'
+GENE_FAMILY_TABLE_NAME = f'{MODULE_NAME}_geneFamily'
+GENE_TO_FAMILY_TABLE_NAME = f'{MODULE_NAME}_humanGene_geneFamily'
+
+Base: DeclarativeMeta = declarative_base()
+
+human_mouse = Table(
+    HUMAN_MOUSE_TABLE_NAME,
+    Base.metadata,
+    Column('human_gene_id', Integer, ForeignKey(f'{HUMAN_GENE_TABLE_NAME}.id'), primary_key=True),
+    Column('mouse_gene_id', Integer, ForeignKey(f'{MOUSE_GENE_TABLE_NAME}.id'), primary_key=True),
+)
+
+human_rat = Table(
+    HUMAN_RAT_TABLE_NAME,
+    Base.metadata,
+    Column('human_gene_id', Integer, ForeignKey(f'{HUMAN_GENE_TABLE_NAME}.id'), primary_key=True),
+    Column('rat_gene_id', Integer, ForeignKey(f'{RAT_GENE_TABLE_NAME}.id'), primary_key=True),
+)
+
+human_family = Table(
+    GENE_TO_FAMILY_TABLE_NAME,
+    Base.metadata,
+    Column('human_gene_id', Integer, ForeignKey(f'{HUMAN_GENE_TABLE_NAME}.id'), primary_key=True),
+    Column('gene_family_id', Integer, ForeignKey(f'{GENE_FAMILY_TABLE_NAME}.id'), primary_key=True),
+)
+
+
+class HumanGene(Base, CompathProteinMixin):
+    """A SQLAlchemy model for a human gene."""
+
+    __tablename__ = HUMAN_GENE_TABLE_NAME
+
+    id = Column(Integer, primary_key=True)
+
+    entrez_id = Column(String(255), doc='entrez id of the protein')
+    hgnc_id = Column(String(255), doc='HGNC id of the protein')
+    hgnc_symbol = Column(String(255), doc='HGN symbol of the protein')
+
+
+class MouseGene(Base):
+    """A SQLAlchemy model for a mouse gene."""
+
+    __tablename__ = MOUSE_GENE_TABLE_NAME
+
+    id = Column(Integer, primary_key=True)
+
+    entrez_id = Column(String(255), doc='entrez id of the protein')
+    mgi_id = Column(String(255), doc='MGI id of the protein')
+    mgi_symbol = Column(String(255), doc='MGI symbol of the protein')
+
+    human_genes = relationship(
+        HumanGene,
+        secondary=human_mouse,
+        backref='mouse_genes',
+    )
+
+
+class RatGene(Base):
+    """A SQLAlchemy model for an rat gene."""
+
+    __tablename__ = RAT_GENE_TABLE_NAME
+
+    id = Column(Integer, primary_key=True)
+
+    entrez_id = Column(String(255), doc='entrez id of the protein')
+    rgd_id = Column(String(255), doc='RGD id of the protein')
+    rgd_symbol = Column(String(255), doc='RGD symbol of the protein')
+
+    human_genes = relationship(
+        HumanGene,
+        secondary=human_rat,
+        backref='rat_genes',
+    )
+
+
+class GeneFamily(CompathPathwayMixin, Base):
+    """A SQLAlchemy model for an HGNC Gene family."""
+
+    __tablename__ = GENE_FAMILY_TABLE_NAME
+
+    id = Column(Integer, primary_key=True)
+
+    identifier = Column(String(255), doc='HGNC gene family id of the protein')
+    symbol = Column(String(255), doc='HGNC gene family symbol of the protein')
+    name = Column(String(255), doc='HGNC gene family name of the protein')
+
+    proteins = relationship(
+        HumanGene,
+        secondary=human_family,
+        backref='gene_families',
+    )

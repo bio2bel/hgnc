@@ -13,8 +13,7 @@ from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
 from pybel import BELGraph
 from pybel.manager.models import Namespace, NamespaceEntry
 from .model_utils import family_to_bel, gene_to_bel
-from .models import Base, GeneFamily, gene_gene_family
-from .wrapper import BaseManager
+from .models import Base, GeneFamily, human_family
 
 __all__ = [
     'Manager',
@@ -24,14 +23,14 @@ __all__ = [
 log = logging.getLogger(__name__)
 
 
-class Manager(AbstractManager, BELNamespaceManagerMixin, BELManagerMixin, BaseManager):
+class Manager(AbstractManager, BELNamespaceManagerMixin, BELManagerMixin):
     """Human gene-gene family memberships."""
 
     _base = Base
     module_name = 'hgnc.genefamily'
 
     namespace_model = GeneFamily
-    edge_model = gene_gene_family
+    edge_model = human_family
     identifiers_recommended = 'HGNC gene family'
     identifiers_pattern = r'^\d+$'
     identifiers_miriam = 'MIR:00000573'
@@ -48,8 +47,8 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, BELManagerMixin, BaseMa
     def _create_namespace_entry_from_model(self, gene_family: GeneFamily, namespace: Namespace) -> NamespaceEntry:
         return NamespaceEntry(
             encoding=self._get_encoding(gene_family),
-            identifier=str(gene_family.family_identifier),
-            name=gene_family.family_name,
+            identifier=str(gene_family.identifier),
+            name=gene_family.name,
             namespace=namespace,
         )
 

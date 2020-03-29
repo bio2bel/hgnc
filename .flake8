@@ -22,6 +22,7 @@ max-complexity = 10
 import-order-style = pycharm
 application-import-names =
 	bio2bel_hgnc
+	pyobo
 	bio2bel
 	pybel
 	tests

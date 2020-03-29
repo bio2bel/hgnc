@@ -2,11 +2,12 @@
 
 """Utilities for Bio2BEL HGNC."""
 
-from .constants import VERSION
-
 __all__ = [
+    'VERSION',
     'get_version',
 ]
+
+VERSION = '0.3.1-dev'
 
 
 def get_version() -> str:

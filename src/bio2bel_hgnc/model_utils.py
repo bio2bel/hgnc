@@ -6,14 +6,13 @@ from typing import List, Optional
 
 from pybel import BELGraph
 from pybel.constants import MIRNA, PROTEIN, RNA
-from pybel.dsl import CentralDogma, FUNC_TO_DSL, Variant, gene as gene_dsl, protein as protein_dsl
-from .constants import ENCODINGS, HGNC, HGNC_GENE_FAMILY, UNIPROT
-from .models import GeneFamily, HumanGene, UniProt
+from pybel.dsl import CentralDogma, FUNC_TO_DSL, Variant, gene as gene_dsl
+from .constants import ENCODINGS, HGNC, HGNC_GENE_FAMILY
+from .models import GeneFamily, HumanGene
 
 __all__ = [
     'gene_to_bel',
     'family_to_bel',
-    'uniprot_to_bel',
 ]
 
 
@@ -57,13 +56,13 @@ def family_to_bel(
     return rv
 
 
-def uniprot_to_bel(uniprot: UniProt) -> protein_dsl:
-    """Convert a UniProt model to BEL."""
-    return protein_dsl(
-        namespace=UNIPROT,
-        name=str(uniprot.uniprotid),
-        identifier=str(uniprot.uniprotid),
-    )
+# def uniprot_to_bel(uniprot: UniProt) -> protein_dsl:
+#     """Convert a UniProt model to BEL."""
+#     return protein_dsl(
+#         namespace=UNIPROT,
+#         name=str(uniprot.uniprotid),
+#         identifier=str(uniprot.uniprotid),
+#     )
 
 
 def add_central_dogma(graph: BELGraph, human_gene: HumanGene) -> None:
